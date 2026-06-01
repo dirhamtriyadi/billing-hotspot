@@ -1,0 +1,6 @@
+.env
+*.md
+Dockerfile
+.dockerignore
+tmp/
+freeradius/

@@ -1,0 +1,86 @@
+# =============================================================================
+#  Billing backend + its database (PostgreSQL).
+#  Self-contained: start/stop independently of the other services.
+#
+#  Prereq (once):   docker network create hotspot-net
+#  Usage:           cp .env.example .env   &&   docker compose up -d --build
+#
+#  Talks to radius-api over the shared `hotspot-net` network (start that stack
+#  too — see ../radius-api). Reads credentials from this folder's `.env`.
+# =============================================================================
+
+services:
+  # ── PostgreSQL: billing database ────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: billing-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-billing}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-billing}
+      POSTGRES_DB: ${DB_NAME:-billing_hotspot}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    networks:
+      - hotspot-net
+    healthcheck:
+      # Specify -d too: without it pg_isready probes a DB named after the user
+      # ("billing"), which doesn't exist and spams the log with FATAL lines.
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DB_USER:-billing} -d ${DB_NAME:-billing_hotspot}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── backend: billing API (runs its own goose migrations on startup) ─────
+  backend:
+    build: .
+    container_name: billing-backend
+    restart: unless-stopped
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      APP_PORT: "8080"
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8080}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      # DB host/port are fixed to the service on this compose network.
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: ${DB_USER:-billing}
+      DB_PASSWORD: ${DB_PASSWORD:-billing}
+      DB_NAME: ${DB_NAME:-billing_hotspot}
+      DB_SSLMODE: disable
+      JWT_SECRET: ${JWT_SECRET:-change-this-to-a-long-random-string-at-least-32-chars}
+      # radius-api lives in its own compose stack, reachable via hotspot-net.
+      RADIUS_API_URL: http://radius-api:8081
+      RADIUS_API_KEY: ${RADIUS_API_KEY:-radius-shared-secret}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:8088}
+      PAYMENT_DEFAULT_PROVIDER: ${PAYMENT_DEFAULT_PROVIDER:-midtrans}
+      XENDIT_SECRET_KEY: ${XENDIT_SECRET_KEY:-}
+      XENDIT_CALLBACK_TOKEN: ${XENDIT_CALLBACK_TOKEN:-}
+      MIDTRANS_SERVER_KEY: ${MIDTRANS_SERVER_KEY:-}
+      MIDTRANS_CLIENT_KEY: ${MIDTRANS_CLIENT_KEY:-}
+      MIDTRANS_IS_PRODUCTION: ${MIDTRANS_IS_PRODUCTION:-false}
+      TRIPAY_API_KEY: ${TRIPAY_API_KEY:-}
+      TRIPAY_PRIVATE_KEY: ${TRIPAY_PRIVATE_KEY:-}
+      TRIPAY_MERCHANT_CODE: ${TRIPAY_MERCHANT_CODE:-}
+      TRIPAY_IS_PRODUCTION: ${TRIPAY_IS_PRODUCTION:-false}
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    networks:
+      - hotspot-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+
+# Shared, externally-created network so this stack can reach radius-api.
+networks:
+  hotspot-net:
+    external: true

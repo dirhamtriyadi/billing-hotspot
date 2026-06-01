@@ -1,0 +1,60 @@
+# -*- text -*-
+#
+# FreeRADIUS SQL module — configured for MariaDB/MySQL, the database managed by
+# the radius-api service. The billing backend never writes here directly; it
+# calls radius-api which owns these tables.
+#
+# Connection values are templated from environment variables by the Docker
+# entrypoint (see freeradius/docker-entrypoint.sh). When running FreeRADIUS
+# outside Docker, replace ${...} with literal values.
+
+sql {
+    dialect = "mysql"
+    driver = "rlm_sql_${dialect}"
+
+    mysql {
+        # TLS disabled for the in-cluster connection; enable for remote DBs.
+        tls {
+            required = no
+        }
+        warnings = auto
+    }
+
+    # ─── Connection ──────────────────────────────────────────────────────────
+    server   = "${SQL_HOST}"
+    port     = ${SQL_PORT}
+    login    = "${SQL_USER}"
+    password = "${SQL_PASSWORD}"
+    radius_db = "${SQL_DB}"
+
+    # ─── Tables ──────────────────────────────────────────────────────────────
+    acct_table1   = "radacct"
+    acct_table2   = "radacct"
+    postauth_table = "radpostauth"
+    authcheck_table = "radcheck"
+    groupcheck_table = "radgroupcheck"
+    authreply_table = "radreply"
+    groupreply_table = "radgroupreply"
+    usergroup_table = "radusergroup"
+    read_groups = yes
+    read_clients = yes
+    client_table = "nas"
+    delete_stale_sessions = yes
+
+    pool {
+        start = 1
+        min = 1
+        max = 16
+        spare = 4
+        uses = 0
+        retry_delay = 30
+        lifetime = 0
+        idle_timeout = 60
+    }
+
+    # Read group membership and replies in priority order.
+    group_attribute = "SQL-Group"
+
+    # Standard query set shipped with FreeRADIUS for the mysql dialect.
+    $INCLUDE ${modconfdir}/${.:name}/main/${dialect}/queries.conf
+}

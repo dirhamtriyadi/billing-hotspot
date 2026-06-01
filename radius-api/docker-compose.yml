@@ -1,0 +1,111 @@
+# =============================================================================
+#  RADIUS stack: radius-api + its database (MariaDB) + FreeRADIUS.
+#  Self-contained: start/stop independently of the billing backend.
+#
+#  Prereq (once):   docker network create hotspot-net
+#  Usage:           cp .env.example .env   &&   docker compose up -d --build
+#
+#  The billing backend (../backend) reaches radius-api over `hotspot-net`.
+#  FreeRADIUS image/config live in ./freeradius (referenced by relative path).
+# =============================================================================
+
+services:
+  # ── MariaDB: FreeRADIUS database ────────────────────────────────────────
+  mariadb:
+    image: mariadb:11
+    container_name: radius-mariadb
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-rootsecret}
+      MARIADB_USER: ${DB_USER:-radius}
+      MARIADB_PASSWORD: ${DB_PASSWORD:-radius}
+      MARIADB_DATABASE: ${DB_NAME:-radius}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    networks:
+      - hotspot-net
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ── radius-api: manages the FreeRADIUS schema (runs its goose migrations) ─
+  radius-api:
+    build: .
+    container_name: radius-api
+    restart: unless-stopped
+    # Run as root so the process can access the mounted Docker socket to restart
+    # FreeRADIUS after a NAS change (the image's default appuser cannot). The
+    # socket already grants root-equivalent host access, so this changes nothing
+    # security-wise. Remove together with the socket mount to disable reloads.
+    user: "0:0"
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      APP_PORT: "8081"
+      DB_HOST: mariadb
+      DB_PORT: "3306"
+      DB_USER: ${DB_USER:-radius}
+      DB_PASSWORD: ${DB_PASSWORD:-radius}
+      DB_NAME: ${DB_NAME:-radius}
+      API_KEY: ${API_KEY:-radius-shared-secret}
+      COA_PORT: ${COA_PORT:-3799}
+      # Auto-reload FreeRADIUS after a NAS change so new routers (each with its
+      # own secret) are recognised immediately. Needs the Docker socket mounted
+      # below. Leave FREERADIUS_CONTAINER empty to disable.
+      FREERADIUS_CONTAINER: ${FREERADIUS_CONTAINER:-radius-freeradius}
+      DOCKER_SOCKET: /var/run/docker.sock
+    volumes:
+      # Read-write access to the Docker socket lets radius-api restart the
+      # FreeRADIUS container. NOTE: this grants root-equivalent host access —
+      # acceptable here because both run on the same trusted host. Remove this
+      # mount (and FREERADIUS_CONTAINER) if you prefer manual reloads.
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "${APP_PORT:-8081}:8081"
+    networks:
+      - hotspot-net
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+  # ── FreeRADIUS: authenticates hotspot users against MariaDB ─────────────
+  freeradius:
+    build: ./freeradius
+    container_name: radius-freeradius
+    restart: unless-stopped
+    environment:
+      SQL_HOST: mariadb
+      SQL_PORT: "3306"
+      SQL_USER: ${DB_USER:-radius}
+      SQL_PASSWORD: ${DB_PASSWORD:-radius}
+      SQL_DB: ${DB_NAME:-radius}
+      NAS_SHARED_SECRET: ${NAS_SHARED_SECRET:-mikrotik-secret}
+      NAS_CLIENT_SUBNET: ${NAS_CLIENT_SUBNET:-0.0.0.0/0}
+      RADIUS_DEBUG: ${RADIUS_DEBUG:-no}
+    volumes:
+      # Mount the editable templates read-only; the entrypoint renders them
+      # (envsubst) into the real raddb paths. Mounting to a separate templates/
+      # dir avoids "Device or resource busy" from writing over a bind-mount.
+      - ./freeradius/raddb/clients.conf:/etc/raddb/templates/clients.conf:ro
+      - ./freeradius/raddb/mods-available/sql:/etc/raddb/templates/sql:ro
+    ports:
+      - "1812:1812/udp"
+      - "1813:1813/udp"
+    networks:
+      - hotspot-net
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      radius-api:
+        condition: service_started
+
+volumes:
+  mariadb_data:
+
+# Shared, externally-created network so the backend can reach radius-api.
+networks:
+  hotspot-net:
+    external: true

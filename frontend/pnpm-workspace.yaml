@@ -1,0 +1,11 @@
+# Build-script approval for esbuild (it ships its platform binary via an
+# optional dependency; approving the build script lets `pnpm install` finish
+# instead of failing with ERR_PNPM_IGNORED_BUILDS).
+#
+# Two keys on purpose:
+#   • allowBuilds        — used by the policy-wrapped pnpm on this host
+#   • onlyBuiltDependencies — used by standard pnpm (corepack inside Docker)
+allowBuilds:
+  esbuild: true
+onlyBuiltDependencies:
+  - esbuild
