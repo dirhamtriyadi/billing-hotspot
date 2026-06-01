@@ -1,0 +1,398 @@
+basePath: /api/v1
+definitions:
+  dto.BulkUsersRequest:
+    properties:
+      users:
+        items:
+          $ref: '#/definitions/dto.UserRequest'
+        minItems: 1
+        type: array
+    required:
+    - users
+    type: object
+  dto.NASRequest:
+    properties:
+      description:
+        type: string
+      nasname:
+        description: IP address or hostname
+        type: string
+      ports:
+        type: integer
+      secret:
+        type: string
+      shortname:
+        type: string
+      type:
+        type: string
+    required:
+    - nasname
+    - secret
+    type: object
+  dto.ProfileRequest:
+    properties:
+      burst_enabled:
+        type: boolean
+      data_quota_mb:
+        type: integer
+      name:
+        type: string
+      rate_down_kbps:
+        type: integer
+      rate_up_kbps:
+        type: integer
+      session_timeout_secs:
+        type: integer
+      simultaneous_use:
+        type: integer
+    required:
+    - name
+    type: object
+  dto.UserDetail:
+    properties:
+      attributes:
+        items:
+          $ref: '#/definitions/models.RadCheck'
+        type: array
+      groups:
+        items:
+          type: string
+        type: array
+      username:
+        type: string
+    type: object
+  dto.UserRequest:
+    properties:
+      expires_at:
+        type: string
+      password:
+        type: string
+      profile:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - profile
+    - username
+    type: object
+  models.Nas:
+    properties:
+      community:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      nasname:
+        type: string
+      ports:
+        type: integer
+      secret:
+        type: string
+      server:
+        type: string
+      shortname:
+        type: string
+      type:
+        type: string
+    type: object
+  models.RadAcct:
+    properties:
+      acct_input_octets:
+        type: integer
+      acct_output_octets:
+        type: integer
+      acct_session_id:
+        type: string
+      acct_session_time:
+        type: integer
+      acct_start_time:
+        type: string
+      acct_stop_time:
+        type: string
+      acct_unique_id:
+        type: string
+      acct_update_time:
+        type: string
+      calling_station_id:
+        type: string
+      framed_ip_address:
+        type: string
+      nas_ip_address:
+        type: string
+      nas_port_id:
+        type: string
+      radacctid:
+        type: integer
+      username:
+        type: string
+    type: object
+  models.RadCheck:
+    properties:
+      attribute:
+        type: string
+      id:
+        type: integer
+      op:
+        type: string
+      username:
+        type: string
+      value:
+        type: string
+    type: object
+  response.Envelope:
+    properties:
+      data: {}
+      error:
+        $ref: '#/definitions/response.ErrorBody'
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  response.ErrorBody:
+    properties:
+      code:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: 'Management API over the FreeRADIUS SQL schema: profiles, users, sessions,
+    NAS clients and CoA disconnect.'
+  title: Radius API
+  version: "1.0"
+paths:
+  /nas:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Envelope'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Nas'
+                  type: array
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: List NAS clients
+      tags:
+      - NAS
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: NAS
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.NASRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Envelope'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Nas'
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Register or update a NAS client
+      tags:
+      - NAS
+  /nas/{id}:
+    delete:
+      parameters:
+      - description: NAS ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope'
+      security:
+      - ApiKeyAuth: []
+      summary: Remove a NAS client
+      tags:
+      - NAS
+  /profiles:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Profile
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope'
+      security:
+      - ApiKeyAuth: []
+      summary: Create or update a profile (FreeRADIUS group)
+      tags:
+      - Profiles
+  /sessions:
+    get:
+      parameters:
+      - description: Filter by username
+        in: query
+        name: username
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Envelope'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.RadAcct'
+                  type: array
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: List active sessions
+      tags:
+      - Sessions
+  /users:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: User
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.Envelope'
+      security:
+      - ApiKeyAuth: []
+      summary: Provision a single credential
+      tags:
+      - Users
+  /users/{username}:
+    delete:
+      parameters:
+      - description: Username
+        in: path
+        name: username
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope'
+      security:
+      - ApiKeyAuth: []
+      summary: Remove a credential
+      tags:
+      - Users
+    get:
+      parameters:
+      - description: Username
+        in: path
+        name: username
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Envelope'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.UserDetail'
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get a credential's attributes
+      tags:
+      - Users
+  /users/{username}/disconnect:
+    post:
+      parameters:
+      - description: Username
+        in: path
+        name: username
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope'
+      security:
+      - ApiKeyAuth: []
+      summary: Disconnect a user's active sessions (CoA/PoD)
+      tags:
+      - Users
+  /users/bulk:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Users
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.BulkUsersRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.Envelope'
+      security:
+      - ApiKeyAuth: []
+      summary: Bulk-provision credentials
+      tags:
+      - Users
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: X-API-Key
+    type: apiKey
+swagger: "2.0"
