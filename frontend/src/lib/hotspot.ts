@@ -9,15 +9,14 @@ try {
   const gw = new URLSearchParams(window.location.search).get("gw");
   if (gw) sessionStorage.setItem("hotspot_gw", gw);
 } catch {
-  /* sessionStorage/URL unavailable — fall back to the build default downstream */
+  /* sessionStorage/URL unavailable — one-tap hotspot login will be unavailable */
 }
 
-/** The hotspot gateway to use for one-tap login (stored gw → build default). */
-export function hotspotGateway(): string {
-  const fallback = import.meta.env.VITE_HOTSPOT_GATEWAY || "10.5.50.1";
+/** The hotspot gateway captured from the captive portal, if present. */
+export function hotspotGateway(): string | null {
   try {
-    return sessionStorage.getItem("hotspot_gw") || fallback;
+    return sessionStorage.getItem("hotspot_gw");
   } catch {
-    return fallback;
+    return null;
   }
 }

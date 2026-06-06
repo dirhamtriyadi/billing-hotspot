@@ -158,15 +158,16 @@ export default function PaymentStatusPage() {
  * itself via hotspotGateway() (captured from the captive portal's ?gw=), so it
  * is correct per-NAS, not hardcoded.
  *
- * If the device isn't actually on the hotspot, navigating to the gateway just
- * fails to load — the manual steps below remain the fallback.
+ * If the user did not enter through the captive portal, the gateway is unknown
+ * and the manual steps below remain the fallback.
  */
 function ConnectNow({ code }: { code: string }) {
   const [submitted, setSubmitted] = useState(false);
+  const gw = hotspotGateway();
 
   const connect = () => {
+    if (!gw) return;
     setSubmitted(true);
-    const gw = hotspotGateway();
     // Mikrotik accepts GET to /login?username=&password= when login-by=http-pap.
     // dst sends the user to the storefront root after a successful login.
     const url =
@@ -176,6 +177,15 @@ function ConnectNow({ code }: { code: string }) {
       `&dst=${encodeURIComponent(window.location.origin)}`;
     window.location.href = url;
   };
+
+  if (!gw) {
+    return (
+      <p className="my-4 rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+        Hubungkan otomatis tersedia saat halaman dibuka dari portal hotspot.
+        Gunakan kode voucher di halaman login WiFi.
+      </p>
+    );
+  }
 
   return (
     <div className="my-4">

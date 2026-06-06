@@ -12,8 +12,6 @@ COPY . .
 # Host only — the "/api/v1" version prefix is added in src/lib/api.ts.
 ARG VITE_API_BASE_URL=http://localhost:8080
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-ARG VITE_HOTSPOT_GATEWAY=10.5.50.1
-ENV VITE_HOTSPOT_GATEWAY=$VITE_HOTSPOT_GATEWAY
 RUN pnpm build
 
 # ── Runtime stage (nginx) ────────────────────────────────────────────────────
