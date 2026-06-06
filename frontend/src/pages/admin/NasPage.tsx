@@ -493,6 +493,9 @@ function ScriptDialog({ nas, onClose }: { nas: NAS; onClose: () => void }) {
     : p.hsInterface === "bridge"
       ? "builtin"
       : "single";
+  const feHostIsLocal =
+    p.feHost.trim().toLowerCase() === "localhost" ||
+    p.feHost.trim().startsWith("127.");
 
   const set = (k: keyof MikrotikParams) => (v: string) =>
     setP((prev) => ({ ...prev, [k]: v }));
@@ -547,6 +550,12 @@ function ScriptDialog({ nas, onClose }: { nas: NAS; onClose: () => void }) {
                 onChange={(e) => set("feHost")(e.target.value)}
                 placeholder="IP/domain panel billing"
               />
+              {feHostIsLocal && (
+                <p className="text-xs text-destructive">
+                  Jangan pakai localhost untuk script router. Isi IP mini PC
+                  yang bisa dijangkau Mikrotik.
+                </p>
+              )}
             </SmallField>
             <SmallField label="CoA Port">
               <Input

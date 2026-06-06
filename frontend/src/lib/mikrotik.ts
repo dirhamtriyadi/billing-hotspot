@@ -76,16 +76,44 @@ const defaultMikrotikParams: Omit<
 };
 
 function configuredBackendHost(): string {
+  if (
+    typeof window !== "undefined" &&
+    window.location.hostname &&
+    !isLocalHost(window.location.hostname)
+  ) {
+    return window.location.hostname;
+  }
+
   const raw = import.meta.env.VITE_API_BASE_URL || "";
   try {
-    if (raw) return new URL(raw).hostname;
+    if (raw) {
+      const host = new URL(raw).hostname;
+      if (!isLocalHost(host)) return host;
+    }
   } catch {
-    return raw.replace(/^https?:\/\//, "").replace(/[:/].*$/, "");
+    const host = raw.replace(/^https?:\/\//, "").replace(/[:/].*$/, "");
+    if (host && !isLocalHost(host)) return host;
   }
+
   if (typeof window !== "undefined" && window.location.hostname) {
     return window.location.hostname;
   }
   return "localhost";
+}
+
+function isLocalHost(host: string): boolean {
+  const normalized = host.trim().toLowerCase();
+  return (
+    normalized === "localhost" ||
+    normalized === "::1" ||
+    normalized.startsWith("127.")
+  );
+}
+
+function routerReachableHost(host?: string): string {
+  const normalized = (host || "").trim();
+  if (!normalized || isLocalHost(normalized)) return configuredBackendHost();
+  return normalized;
 }
 
 /** Derive sensible network defaults + the secret from a NAS record. */
@@ -96,9 +124,9 @@ export function paramsFromNas(
   const cfg = nas.hotspot_config;
   const host = configuredBackendHost();
   return {
-    radiusIP: cfg?.radius_ip || host,
+    radiusIP: routerReachableHost(cfg?.radius_ip) || host,
     radiusSecret: nas.secret,
-    feHost: cfg?.frontend_host || host,
+    feHost: routerReachableHost(cfg?.frontend_host) || host,
     ...defaultMikrotikParams,
     coaPort: cfg?.coa_port || defaultMikrotikParams.coaPort,
     wanInterface: cfg?.wan_interface || defaultMikrotikParams.wanInterface,
