@@ -193,12 +193,16 @@ export function paramsFromNas(
   };
 }
 
-/** Best-effort storefront URL from the walled-garden host (nginx serves :8088). */
+/** Best-effort storefront URL using the same host and current frontend port. */
 export function storeUrlFromParams(p: { feHost: string }): string {
   const endpoint = normalizeHTTPBase(p.feHost);
-  if (!endpoint) return `http://${configuredBackendHost()}:8088`;
+  const frontendPort =
+    typeof window !== "undefined" && window.location.port
+      ? window.location.port
+      : "8088";
+  if (!endpoint) return `http://${configuredBackendHost()}:${frontendPort}`;
   const url = new URL(endpoint);
-  return `${url.protocol}//${url.hostname}:8088`;
+  return `${url.protocol}//${url.hostname}:${frontendPort}`;
 }
 
 /** Backend API base the router fetches login.html from. */
@@ -208,10 +212,10 @@ function backendUrlFromParams(p: { feHost: string }): string {
 
 /** Build the full setup .rsc script text. */
 export function generateMikrotikScript(p: MikrotikParams): string {
-  // Plain URL with NO query string: RouterOS terminal treats "?" as its help
-  // key, which mangles a pasted URL. The backend already defaults the "Beli
-  // Paket" target to its FRONTEND_URL, so no ?store= is needed.
-  const loginFetchUrl = `${backendUrlFromParams(p)}/api/v1/public/hotspot/login.html`;
+  const storeUrl = storeUrlFromParams(p);
+  const loginFetchUrl =
+    `${backendUrlFromParams(p)}/api/v1/public/hotspot/login.html` +
+    `?store=${encodeURIComponent(storeUrl)}`;
   const ports = (p.bridgePorts || "")
     .split(",")
     .map((s) => s.trim())
