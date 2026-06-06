@@ -44,7 +44,7 @@ import {
   Router as RouterIcon,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -483,6 +483,7 @@ export default function NasPage() {
 
 function ScriptDialog({ nas, onClose }: { nas: NAS; onClose: () => void }) {
   const [p, setP] = useState<MikrotikParams>(() => paramsFromNas(nas));
+  const scriptRef = useRef<HTMLTextAreaElement>(null);
   const script = generateMikrotikScript(p);
   const storeUrl = storeUrlFromParams(p);
 
@@ -499,6 +500,11 @@ function ScriptDialog({ nas, onClose }: { nas: NAS; onClose: () => void }) {
 
   const set = (k: keyof MikrotikParams) => (v: string) =>
     setP((prev) => ({ ...prev, [k]: v }));
+
+  const selectScript = () => {
+    scriptRef.current?.focus();
+    scriptRef.current?.select();
+  };
 
   const copy = (text: string, label: string) =>
     copyText(text)
@@ -680,8 +686,16 @@ function ScriptDialog({ nas, onClose }: { nas: NAS; onClose: () => void }) {
 
           {/* Setup script */}
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => copy(script, "Script setup")}>
+            <Button
+              onClick={() => {
+                selectScript();
+                copy(script, "Script setup");
+              }}
+            >
               <Copy className="h-4 w-4" /> Salin Script
+            </Button>
+            <Button variant="outline" onClick={selectScript}>
+              <Copy className="h-4 w-4" /> Pilih Teks Script
             </Button>
             <Button
               variant="outline"
@@ -733,9 +747,13 @@ function ScriptDialog({ nas, onClose }: { nas: NAS; onClose: () => void }) {
             </div>
           </div>
 
-          <pre className="max-h-72 overflow-y-auto whitespace-pre-wrap break-words rounded-lg bg-muted p-4 font-mono text-xs leading-relaxed">
-            {script}
-          </pre>
+          <Textarea
+            ref={scriptRef}
+            readOnly
+            value={script}
+            className="h-72 resize-y whitespace-pre-wrap font-mono text-xs leading-relaxed"
+            onFocus={(e) => e.currentTarget.select()}
+          />
         </div>
       </DialogContent>
     </Dialog>
