@@ -138,6 +138,20 @@ function normalizeHTTPBase(value: string): string {
   return `http://${raw.replace(/\/.*$/, "")}`;
 }
 
+function normalizeBackendBase(value: string): string {
+  const endpoint = normalizeHTTPBase(value);
+  if (!endpoint) return configuredBackendURL();
+
+  const url = new URL(endpoint);
+  if (url.port) return trimURLPath(url);
+
+  const configured = new URL(configuredBackendURL());
+  if (configured.port && !isLocalHost(configured.hostname)) {
+    url.port = configured.port;
+  }
+  return trimURLPath(url);
+}
+
 function routerReachableHost(host?: string): string {
   const normalized = (host || "").trim();
   if (!normalized) return configuredBackendHost();
@@ -189,8 +203,7 @@ export function storeUrlFromParams(p: { feHost: string }): string {
 
 /** Backend API base the router fetches login.html from. */
 function backendUrlFromParams(p: { feHost: string }): string {
-  const endpoint = normalizeHTTPBase(p.feHost);
-  return endpoint || configuredBackendURL();
+  return normalizeBackendBase(p.feHost);
 }
 
 /** Build the full setup .rsc script text. */
