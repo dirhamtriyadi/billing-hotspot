@@ -10,6 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -20,7 +21,6 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
-import { copyText } from "@/lib/clipboard";
 import { applyApiErrors, errorMessage } from "@/lib/form";
 import {
   generateLoginHtml,
@@ -35,7 +35,6 @@ import type { NAS } from "@/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Copy,
   Download,
   FileCode,
   Loader2,
@@ -44,7 +43,7 @@ import {
   Router as RouterIcon,
   Trash2,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -483,9 +482,30 @@ export default function NasPage() {
 
 function ScriptDialog({ nas, onClose }: { nas: NAS; onClose: () => void }) {
   const [p, setP] = useState<MikrotikParams>(() => paramsFromNas(nas));
-  const scriptRef = useRef<HTMLTextAreaElement>(null);
+  const [activeScript, setActiveScript] = useState<
+    "setup" | "teardown" | "login"
+  >("setup");
   const script = generateMikrotikScript(p);
+  const teardownScript = generateMikrotikTeardown();
   const storeUrl = storeUrlFromParams(p);
+  const loginHtml = generateLoginHtml(storeUrl);
+  const activeArtifact = {
+    setup: {
+      label: "Script setup",
+      fileName: "hotspot-billing.rsc",
+      content: script,
+    },
+    teardown: {
+      label: "Script teardown",
+      fileName: "hotspot-billing-teardown.rsc",
+      content: teardownScript,
+    },
+    login: {
+      label: "login.html",
+      fileName: "login.html",
+      content: loginHtml,
+    },
+  }[activeScript];
 
   // Derive the WiFi-source mode from params: bridge ports set → new bridge;
   // hsInterface "bridge" with no ports → built-in bridge; otherwise single.
@@ -500,16 +520,6 @@ function ScriptDialog({ nas, onClose }: { nas: NAS; onClose: () => void }) {
 
   const set = (k: keyof MikrotikParams) => (v: string) =>
     setP((prev) => ({ ...prev, [k]: v }));
-
-  const selectScript = () => {
-    scriptRef.current?.focus();
-    scriptRef.current?.select();
-  };
-
-  const copy = (text: string, label: string) =>
-    copyText(text)
-      .then(() => toast.success(`${label} disalin`))
-      .catch(() => toast.error("Gagal menyalin"));
 
   const download = (text: string, name: string) => {
     const blob = new Blob([text], { type: "text/plain" });
@@ -684,75 +694,40 @@ function ScriptDialog({ nas, onClose }: { nas: NAS; onClose: () => void }) {
             </SmallField>
           </div>
 
-          {/* Setup script */}
-          <div className="flex flex-wrap gap-2">
-            <Button
-              onClick={() => {
-                selectScript();
-                copy(script, "Script setup");
-              }}
-            >
-              <Copy className="h-4 w-4" /> Salin Script
-            </Button>
-            <Button variant="outline" onClick={selectScript}>
-              <Copy className="h-4 w-4" /> Pilih Teks Script
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => download(script, "hotspot-billing.rsc")}
-            >
-              <Download className="h-4 w-4" /> Unduh .rsc
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() =>
-                copy(generateMikrotikTeardown(), "Script teardown")
-              }
-            >
-              <Copy className="h-4 w-4" /> Salin Teardown
-            </Button>
-          </div>
-
-          {/* Captive portal login.html */}
-          <div className="rounded-lg border border-dashed p-3">
-            <p className="mb-1 text-sm font-medium">
-              Halaman Login Hotspot (captive portal)
-            </p>
-            <p className="mb-3 text-xs text-muted-foreground">
-              Saat pelanggan pertama terhubung WiFi, halaman ini muncul: tombol{" "}
-              <b>Beli Paket</b> ke storefront + form <b>kode voucher</b>.{" "}
-              <b>
-                Script .rsc di atas sudah otomatis mengunduh login.html ke
-                router
-              </b>{" "}
-              (flash/hotspot) saat dijalankan — tidak perlu upload manual.
-              Tombol di bawah hanya untuk cadangan/preview. Diarahkan ke{" "}
-              <code>{storeUrl}</code>.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                onClick={() => copy(generateLoginHtml(storeUrl), "login.html")}
+          <div className="space-y-3 rounded-lg border border-dashed p-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <Tabs
+                value={activeScript}
+                onValueChange={(v) =>
+                  setActiveScript(v as "setup" | "teardown" | "login")
+                }
               >
-                <Copy className="h-4 w-4" /> Salin login.html
-              </Button>
+                <TabsList>
+                  <TabsTrigger value="setup">Setup .rsc</TabsTrigger>
+                  <TabsTrigger value="teardown">Teardown .rsc</TabsTrigger>
+                  <TabsTrigger value="login">login.html</TabsTrigger>
+                </TabsList>
+              </Tabs>
               <Button
                 variant="outline"
                 onClick={() =>
-                  download(generateLoginHtml(storeUrl), "login.html")
+                  download(activeArtifact.content, activeArtifact.fileName)
                 }
               >
-                <Download className="h-4 w-4" /> Unduh login.html
+                <Download className="h-4 w-4" /> Unduh {activeArtifact.label}
               </Button>
             </div>
+
+            <p className="text-xs text-muted-foreground">
+              Pilih tab untuk melihat artefak. Script setup mengunduh{" "}
+              <code>login.html</code> otomatis dari <code>{storeUrl}</code>.
+            </p>
           </div>
 
           <Textarea
-            ref={scriptRef}
             readOnly
-            value={script}
+            value={activeArtifact.content}
             className="h-72 resize-y whitespace-pre-wrap font-mono text-xs leading-relaxed"
-            onFocus={(e) => e.currentTarget.select()}
           />
         </div>
       </DialogContent>
