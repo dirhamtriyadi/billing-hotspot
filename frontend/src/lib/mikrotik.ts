@@ -75,30 +75,36 @@ const defaultMikrotikParams: Omit<
   hsDNS: "8.8.8.8,1.1.1.1",
 };
 
-function configuredBackendHost(): string {
+function configuredBackendURL(): string {
+  const fromWindow =
+    typeof window !== "undefined" && window.location.hostname
+      ? `http://${window.location.hostname}:8080`
+      : "";
+
+  const raw = import.meta.env.VITE_API_BASE_URL || "";
+  try {
+    if (raw) {
+      const url = new URL(raw);
+      if (!isLocalHost(url.hostname)) return trimURLPath(url);
+    }
+  } catch {
+    const endpoint = normalizeHTTPBase(raw);
+    if (!isLocalEndpoint(endpoint)) return endpoint;
+  }
+
   if (
     typeof window !== "undefined" &&
     window.location.hostname &&
     !isLocalHost(window.location.hostname)
   ) {
-    return window.location.hostname;
+    return fromWindow;
   }
 
-  const raw = import.meta.env.VITE_API_BASE_URL || "";
-  try {
-    if (raw) {
-      const host = new URL(raw).hostname;
-      if (!isLocalHost(host)) return host;
-    }
-  } catch {
-    const host = raw.replace(/^https?:\/\//, "").replace(/[:/].*$/, "");
-    if (host && !isLocalHost(host)) return host;
-  }
+  return fromWindow || "http://localhost:8080";
+}
 
-  if (typeof window !== "undefined" && window.location.hostname) {
-    return window.location.hostname;
-  }
-  return "localhost";
+function configuredBackendHost(): string {
+  return new URL(configuredBackendURL()).hostname;
 }
 
 function isLocalHost(host: string): boolean {
@@ -110,9 +116,40 @@ function isLocalHost(host: string): boolean {
   );
 }
 
+function isLocalEndpoint(endpoint: string): boolean {
+  try {
+    return isLocalHost(new URL(endpoint).hostname);
+  } catch {
+    return false;
+  }
+}
+
+function trimURLPath(url: URL): string {
+  return `${url.protocol}//${url.host}`;
+}
+
+function normalizeHTTPBase(value: string): string {
+  const raw = value.trim().replace(/\/+$/, "");
+  if (!raw) return "";
+  if (raw.startsWith("http://") || raw.startsWith("https://")) {
+    const url = new URL(raw);
+    return trimURLPath(url);
+  }
+  return `http://${raw.replace(/\/.*$/, "")}`;
+}
+
 function routerReachableHost(host?: string): string {
   const normalized = (host || "").trim();
-  if (!normalized || isLocalHost(normalized)) return configuredBackendHost();
+  if (!normalized) return configuredBackendHost();
+  try {
+    if (isLocalHost(new URL(normalizeHTTPBase(normalized)).hostname)) {
+      return configuredBackendHost();
+    }
+  } catch {
+    if (isLocalHost(normalized.replace(/:\d+$/, ""))) {
+      return configuredBackendHost();
+    }
+  }
   return normalized;
 }
 
@@ -144,23 +181,16 @@ export function paramsFromNas(
 
 /** Best-effort storefront URL from the walled-garden host (nginx serves :8088). */
 export function storeUrlFromParams(p: { feHost: string }): string {
-  const host = (p.feHost || "").trim();
-  if (!host) return `http://${configuredBackendHost()}:8088`;
-  if (host.startsWith("http://") || host.startsWith("https://")) return host;
-  return `http://${host}:8088`;
+  const endpoint = normalizeHTTPBase(p.feHost);
+  if (!endpoint) return `http://${configuredBackendHost()}:8088`;
+  const url = new URL(endpoint);
+  return `${url.protocol}//${url.hostname}:8088`;
 }
 
-/** Bare host (no scheme/port) from feHost, for building the backend URL. */
-function bareHost(feHost: string): string {
-  return (feHost || configuredBackendHost())
-    .trim()
-    .replace(/^https?:\/\//, "")
-    .replace(/[:/].*$/, "");
-}
-
-/** Backend API base the router fetches login.html from (backend on :8080). */
+/** Backend API base the router fetches login.html from. */
 function backendUrlFromParams(p: { feHost: string }): string {
-  return `http://${bareHost(p.feHost)}:8080`;
+  const endpoint = normalizeHTTPBase(p.feHost);
+  return endpoint || configuredBackendURL();
 }
 
 /** Build the full setup .rsc script text. */

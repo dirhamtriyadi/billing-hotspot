@@ -560,11 +560,11 @@ function ScriptDialog({ nas, onClose }: { nas: NAS; onClose: () => void }) {
                 onChange={(e) => set("radiusSecret")(e.target.value)}
               />
             </SmallField>
-            <SmallField label="Host Frontend/Backend (walled garden)">
+            <SmallField label="Host/URL Backend (walled garden)">
               <Input
                 value={p.feHost}
                 onChange={(e) => set("feHost")(e.target.value)}
-                placeholder="IP/domain panel billing"
+                placeholder="192.168.1.3:8082 / http://192.168.1.3:8082"
               />
               {feHostIsLocal && (
                 <p className="text-xs text-destructive">
