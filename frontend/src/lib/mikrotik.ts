@@ -75,16 +75,41 @@ const defaultMikrotikParams: Omit<
   hsDNS: "8.8.8.8,1.1.1.1",
 };
 
+function configuredBackendHost(): string {
+  const raw = import.meta.env.VITE_API_BASE_URL || "";
+  try {
+    if (raw) return new URL(raw).hostname;
+  } catch {
+    return raw.replace(/^https?:\/\//, "").replace(/[:/].*$/, "");
+  }
+  if (typeof window !== "undefined" && window.location.hostname) {
+    return window.location.hostname;
+  }
+  return "localhost";
+}
+
 /** Derive sensible network defaults + the secret from a NAS record. */
 export function paramsFromNas(
   nas: NAS,
   overrides: Partial<MikrotikParams> = {},
 ): MikrotikParams {
+  const cfg = nas.hotspot_config;
+  const host = configuredBackendHost();
   return {
-    radiusIP: "192.168.10.100",
+    radiusIP: cfg?.radius_ip || host,
     radiusSecret: nas.secret,
-    feHost: "192.168.10.100",
+    feHost: cfg?.frontend_host || host,
     ...defaultMikrotikParams,
+    coaPort: cfg?.coa_port || defaultMikrotikParams.coaPort,
+    wanInterface: cfg?.wan_interface || defaultMikrotikParams.wanInterface,
+    hsInterface:
+      cfg?.hotspot_interface || defaultMikrotikParams.hsInterface,
+    bridgePorts: cfg?.bridge_ports ?? defaultMikrotikParams.bridgePorts,
+    hsNetwork: cfg?.hotspot_network || defaultMikrotikParams.hsNetwork,
+    hsGateway: cfg?.hotspot_gateway || defaultMikrotikParams.hsGateway,
+    hsPoolRange:
+      cfg?.hotspot_pool_range || defaultMikrotikParams.hsPoolRange,
+    hsDNS: cfg?.hotspot_dns || defaultMikrotikParams.hsDNS,
     ...overrides,
   };
 }
@@ -92,14 +117,14 @@ export function paramsFromNas(
 /** Best-effort storefront URL from the walled-garden host (nginx serves :8088). */
 export function storeUrlFromParams(p: { feHost: string }): string {
   const host = (p.feHost || "").trim();
-  if (!host) return "http://192.168.10.100:8088";
+  if (!host) return `http://${configuredBackendHost()}:8088`;
   if (host.startsWith("http://") || host.startsWith("https://")) return host;
   return `http://${host}:8088`;
 }
 
 /** Bare host (no scheme/port) from feHost, for building the backend URL. */
 function bareHost(feHost: string): string {
-  return (feHost || "192.168.10.100")
+  return (feHost || configuredBackendHost())
     .trim()
     .replace(/^https?:\/\//, "")
     .replace(/[:/].*$/, "");
@@ -354,7 +379,7 @@ export function generateMikrotikTeardown(): string {
  *
  * Upload the file as `login.html` into the router's hotspot directory (Files →
  * `hotspot/`). `storeUrl` is the storefront URL reachable from the walled
- * garden, e.g. http://192.168.10.100:8088
+ * garden, e.g. http://billing.local:8088
  */
 export function generateLoginHtml(storeUrl: string): string {
   return `<!DOCTYPE html>

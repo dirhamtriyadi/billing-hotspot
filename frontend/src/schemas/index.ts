@@ -62,6 +62,19 @@ export const batchSchema = z.object({
 });
 export type BatchValues = z.infer<typeof batchSchema>;
 
+const nasHotspotConfigSchema = z.object({
+  radius_ip: z.string().max(128, "Maksimal 128 karakter").optional(),
+  frontend_host: z.string().max(128, "Maksimal 128 karakter").optional(),
+  coa_port: z.string().max(10, "Maksimal 10 karakter").optional(),
+  wan_interface: z.string().max(60, "Maksimal 60 karakter").optional(),
+  hotspot_interface: z.string().max(60, "Maksimal 60 karakter").optional(),
+  bridge_ports: z.string().max(200, "Maksimal 200 karakter").optional(),
+  hotspot_network: z.string().max(64, "Maksimal 64 karakter").optional(),
+  hotspot_gateway: z.string().max(64, "Maksimal 64 karakter").optional(),
+  hotspot_pool_range: z.string().max(128, "Maksimal 128 karakter").optional(),
+  hotspot_dns: z.string().max(128, "Maksimal 128 karakter").optional(),
+});
+
 export const nasSchema = z.object({
   nasname: z
     .string()
@@ -84,6 +97,7 @@ export const nasSchema = z.object({
         .max(65535, "Maksimal 65535"),
     ])
     .optional(),
+  hotspot_config: nasHotspotConfigSchema,
 });
 export type NasValues = z.infer<typeof nasSchema>;
 

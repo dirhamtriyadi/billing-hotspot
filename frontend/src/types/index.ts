@@ -184,6 +184,20 @@ export interface NAS {
   server: string;
   community: string;
   description: string;
+  hotspot_config: NASHotspotConfig;
+}
+
+export interface NASHotspotConfig {
+  radius_ip: string;
+  frontend_host: string;
+  coa_port: string;
+  wan_interface: string;
+  hotspot_interface: string;
+  bridge_ports: string;
+  hotspot_network: string;
+  hotspot_gateway: string;
+  hotspot_pool_range: string;
+  hotspot_dns: string;
 }
 
 // ─── Payment gateway settings (secrets masked on read) ───────────────────────

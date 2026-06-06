@@ -54,6 +54,18 @@ const defaults: NasValues = {
   type: "mikrotik",
   description: "",
   ports: "",
+  hotspot_config: {
+    radius_ip: "",
+    frontend_host: "",
+    coa_port: "3799",
+    wan_interface: "ether1",
+    hotspot_interface: "bridge-hotspot",
+    bridge_ports: "wlan1,wlan2",
+    hotspot_network: "10.5.50.0/24",
+    hotspot_gateway: "10.5.50.1",
+    hotspot_pool_range: "10.5.50.10-10.5.50.254",
+    hotspot_dns: "8.8.8.8,1.1.1.1",
+  },
 };
 
 export default function NasPage() {
@@ -87,6 +99,10 @@ export default function NasPage() {
       type: n.type || "mikrotik",
       description: n.description,
       ports: n.ports ?? "",
+      hotspot_config: {
+        ...defaults.hotspot_config,
+        ...n.hotspot_config,
+      },
     });
     setOpen(true);
   };
@@ -155,6 +171,7 @@ export default function NasPage() {
                   <TableHead>NAS Name (IP/Identitas)</TableHead>
                   <TableHead>Nama Pendek</TableHead>
                   <TableHead>Tipe</TableHead>
+                  <TableHead>Gateway Hotspot</TableHead>
                   <TableHead>Secret</TableHead>
                   <TableHead>Deskripsi</TableHead>
                   <TableHead className="text-right">Aksi</TableHead>
@@ -169,6 +186,9 @@ export default function NasPage() {
                     <TableCell>{n.shortname || "-"}</TableCell>
                     <TableCell>
                       <Badge variant="secondary">{n.type || "other"}</Badge>
+                    </TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {n.hotspot_config?.hotspot_gateway || "-"}
                     </TableCell>
                     <TableCell className="font-mono text-xs text-muted-foreground">
                       ••••{n.secret.slice(-4)}
@@ -210,7 +230,7 @@ export default function NasPage() {
                 {data?.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={6}
+                      colSpan={7}
                       className="py-8 text-center text-muted-foreground"
                     >
                       Belum ada router terdaftar.
@@ -246,7 +266,7 @@ export default function NasPage() {
 
       {/* Add / edit dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editing ? "Edit Router" : "Tambah Router"}
@@ -308,6 +328,132 @@ export default function NasPage() {
             >
               <Textarea rows={2} {...form.register("description")} />
             </Field>
+
+            <div className="space-y-3 rounded-md border p-3">
+              <div>
+                <p className="text-sm font-medium">Konfigurasi Hotspot</p>
+                <p className="text-xs text-muted-foreground">
+                  Disimpan per router dan dipakai sebagai default saat generate
+                  script Mikrotik.
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field
+                  label="IP Server RADIUS"
+                  error={
+                    form.formState.errors.hotspot_config?.radius_ip?.message
+                  }
+                >
+                  <Input
+                    placeholder="kosong = host backend saat ini"
+                    {...form.register("hotspot_config.radius_ip")}
+                  />
+                </Field>
+                <Field
+                  label="Host Frontend/Backend"
+                  error={
+                    form.formState.errors.hotspot_config?.frontend_host?.message
+                  }
+                >
+                  <Input
+                    placeholder="kosong = host backend saat ini"
+                    {...form.register("hotspot_config.frontend_host")}
+                  />
+                </Field>
+                <Field
+                  label="Gateway Hotspot"
+                  error={
+                    form.formState.errors.hotspot_config?.hotspot_gateway
+                      ?.message
+                  }
+                >
+                  <Input
+                    placeholder="10.5.50.1"
+                    {...form.register("hotspot_config.hotspot_gateway")}
+                  />
+                </Field>
+                <Field
+                  label="Subnet Hotspot"
+                  error={
+                    form.formState.errors.hotspot_config?.hotspot_network
+                      ?.message
+                  }
+                >
+                  <Input
+                    placeholder="10.5.50.0/24"
+                    {...form.register("hotspot_config.hotspot_network")}
+                  />
+                </Field>
+                <Field
+                  label="Range DHCP"
+                  error={
+                    form.formState.errors.hotspot_config?.hotspot_pool_range
+                      ?.message
+                  }
+                >
+                  <Input
+                    placeholder="10.5.50.10-10.5.50.254"
+                    {...form.register("hotspot_config.hotspot_pool_range")}
+                  />
+                </Field>
+                <Field
+                  label="DNS"
+                  error={
+                    form.formState.errors.hotspot_config?.hotspot_dns?.message
+                  }
+                >
+                  <Input
+                    placeholder="8.8.8.8,1.1.1.1"
+                    {...form.register("hotspot_config.hotspot_dns")}
+                  />
+                </Field>
+                <Field
+                  label="WAN / Sumber Internet"
+                  error={
+                    form.formState.errors.hotspot_config?.wan_interface?.message
+                  }
+                >
+                  <Input
+                    placeholder="ether1"
+                    {...form.register("hotspot_config.wan_interface")}
+                  />
+                </Field>
+                <Field
+                  label="CoA Port"
+                  error={
+                    form.formState.errors.hotspot_config?.coa_port?.message
+                  }
+                >
+                  <Input
+                    placeholder="3799"
+                    {...form.register("hotspot_config.coa_port")}
+                  />
+                </Field>
+                <Field
+                  label="Interface Hotspot"
+                  error={
+                    form.formState.errors.hotspot_config?.hotspot_interface
+                      ?.message
+                  }
+                >
+                  <Input
+                    placeholder="bridge-hotspot / bridge / wlan1"
+                    {...form.register("hotspot_config.hotspot_interface")}
+                  />
+                </Field>
+                <Field
+                  label="Bridge Ports"
+                  error={
+                    form.formState.errors.hotspot_config?.bridge_ports?.message
+                  }
+                >
+                  <Input
+                    placeholder="wlan1,wlan2"
+                    {...form.register("hotspot_config.bridge_ports")}
+                  />
+                </Field>
+              </div>
+            </div>
 
             <div className="flex justify-end gap-2 pt-2">
               <Button
@@ -386,7 +532,7 @@ function ScriptDialog({ nas, onClose }: { nas: NAS; onClose: () => void }) {
               <Input
                 value={p.radiusIP}
                 onChange={(e) => set("radiusIP")(e.target.value)}
-                placeholder="192.168.10.100"
+                placeholder="IP server billing/RADIUS"
               />
             </SmallField>
             <SmallField label="RADIUS Secret (= secret NAS)">
@@ -399,7 +545,7 @@ function ScriptDialog({ nas, onClose }: { nas: NAS; onClose: () => void }) {
               <Input
                 value={p.feHost}
                 onChange={(e) => set("feHost")(e.target.value)}
-                placeholder="192.168.10.100"
+                placeholder="IP/domain panel billing"
               />
             </SmallField>
             <SmallField label="CoA Port">
