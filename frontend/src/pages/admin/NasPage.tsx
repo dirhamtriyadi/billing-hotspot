@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
+import { copyText } from "@/lib/clipboard";
 import { applyApiErrors, errorMessage } from "@/lib/form";
 import {
   generateLoginHtml,
@@ -497,8 +498,7 @@ function ScriptDialog({ nas, onClose }: { nas: NAS; onClose: () => void }) {
     setP((prev) => ({ ...prev, [k]: v }));
 
   const copy = (text: string, label: string) =>
-    navigator.clipboard
-      .writeText(text)
+    copyText(text)
       .then(() => toast.success(`${label} disalin`))
       .catch(() => toast.error("Gagal menyalin"));
 
