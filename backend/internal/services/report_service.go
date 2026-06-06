@@ -52,6 +52,9 @@ func (s *ReportService) Generate(ctx context.Context, q dto.ReportQuery) (*dto.R
 			Start: start.Format(reportDateLayout),
 			End:   end.Format(reportDateLayout),
 		},
+		Series:    []dto.RevenuePoint{},
+		ByMethod:  []dto.RevenueByMethod{},
+		ByPackage: []dto.RevenueByPackage{},
 	}
 
 	// Headline figures — revenue is based on paid orders by paid_at.

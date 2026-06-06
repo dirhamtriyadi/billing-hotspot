@@ -79,6 +79,9 @@ export default function ReportsPage() {
   };
 
   const s = data?.summary;
+  const series = data?.series ?? [];
+  const byMethod = data?.by_method ?? [];
+  const byPackage = data?.by_package ?? [];
 
   return (
     <div className="space-y-6">
@@ -167,7 +170,7 @@ export default function ReportsPage() {
               <div className="h-72 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart
-                    data={data.series}
+                    data={series}
                     margin={{ top: 8, right: 12, left: 4, bottom: 0 }}
                   >
                     <defs>
@@ -230,7 +233,7 @@ export default function ReportsPage() {
               </CardHeader>
               <CardContent className="p-0">
                 <Breakdown
-                  rows={data.by_method.map((m) => ({
+                  rows={byMethod.map((m) => ({
                     label: METHOD_LABELS[m.method] ?? m.method,
                     orders: m.orders,
                     revenue: m.revenue,
@@ -246,7 +249,7 @@ export default function ReportsPage() {
               </CardHeader>
               <CardContent className="p-0">
                 <Breakdown
-                  rows={data.by_package.map((p) => ({
+                  rows={byPackage.map((p) => ({
                     label: p.package_name,
                     orders: p.orders,
                     revenue: p.revenue,
