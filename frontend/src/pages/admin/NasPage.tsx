@@ -57,6 +57,7 @@ const defaults: NasValues = {
   hotspot_config: {
     radius_api_url: "",
     radius_api_key: "",
+    radius_server_id: "",
     radius_ip: "",
     frontend_url: "",
     backend_url: "",
@@ -82,6 +83,10 @@ export default function NasPage() {
     queryKey: ["nas"],
     queryFn: api.nas.list,
   });
+  const { data: radiusServers } = useQuery({
+    queryKey: ["radius-servers"],
+    queryFn: api.radiusServers.list,
+  });
 
   const form = useForm<NasValues>({
     resolver: zodResolver(nasSchema),
@@ -106,20 +111,30 @@ export default function NasPage() {
       hotspot_config: {
         ...defaults.hotspot_config,
         ...n.hotspot_config,
+        radius_server_id: n.hotspot_config?.radius_server_id ?? "",
       },
     });
     setOpen(true);
   };
 
   const save = useMutation({
-    mutationFn: (values: NasValues) =>
-      api.nas.upsert({
+    mutationFn: (values: NasValues) => {
+      const radiusServerId = values.hotspot_config.radius_server_id;
+      return api.nas.upsert({
         ...values,
         ports:
           values.ports === "" || values.ports == null
             ? undefined
             : Number(values.ports),
-      }),
+        hotspot_config: {
+          ...values.hotspot_config,
+          radius_server_id:
+            radiusServerId === "" || radiusServerId == null
+              ? undefined
+              : Number(radiusServerId),
+        },
+      });
+    },
     onSuccess: () => {
       toast.success(editing ? "Router diperbarui" : "Router ditambahkan");
       qc.invalidateQueries({ queryKey: ["nas"] });
@@ -342,6 +357,57 @@ export default function NasPage() {
                 </p>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
+                <Field
+                  label="Radius Server"
+                  error={
+                    form.formState.errors.hotspot_config?.radius_server_id
+                      ?.message
+                  }
+                >
+                  <select
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    value={
+                      form.watch("hotspot_config.radius_server_id")?.toString() ||
+                      ""
+                    }
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      form.setValue(
+                        "hotspot_config.radius_server_id",
+                        value === "" ? "" : Number(value),
+                      );
+                      const selected = radiusServers?.find(
+                        (srv) => String(srv.id) === value,
+                      );
+                      if (selected) {
+                        form.setValue(
+                          "hotspot_config.radius_api_url",
+                          selected.api_url,
+                        );
+                        form.setValue(
+                          "hotspot_config.radius_api_key",
+                          selected.api_key,
+                        );
+                        form.setValue(
+                          "hotspot_config.radius_ip",
+                          selected.radius_ip,
+                        );
+                        form.setValue(
+                          "hotspot_config.coa_port",
+                          selected.coa_port || "3799",
+                        );
+                      }
+                    }}
+                  >
+                    <option value="">Env default / input manual</option>
+                    {radiusServers?.map((srv) => (
+                      <option key={srv.id} value={srv.id}>
+                        {srv.name}
+                        {srv.is_default ? " (default)" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
                 <Field
                   label="Radius API URL Cabang"
                   error={

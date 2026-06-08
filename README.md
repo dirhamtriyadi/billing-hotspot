@@ -260,10 +260,21 @@ Pesanan (paid) ─► backend mints Voucher ─► POST radius-api /users
 
 ### Multi-cabang dengan RADIUS lokal
 
-Untuk cabang yang masing-masing punya FreeRADIUS lokal, isi **Radius API URL
-Cabang** dan **Radius API Key Cabang** pada menu **Admin → Router (NAS)**.
-Backend akan menyebarkan profil paket dan voucher ke semua endpoint `radius-api`
-unik yang terdaftar, sehingga voucher yang sama bisa dipakai di semua cabang.
+Untuk cabang yang masing-masing punya FreeRADIUS lokal, daftarkan dulu endpoint
+di **Admin → Radius Server**:
+
+- **Radius API URL**: URL `radius-api` cabang, mis.
+  `https://radius-bandung.example.com`.
+- **Radius API Key**: API key `radius-api` cabang.
+- **IP Server RADIUS**: IP/host FreeRADIUS yang bisa dijangkau Mikrotik cabang.
+
+Lalu di **Admin → Router (NAS)** pilih **Radius Server** yang sesuai. Field
+Radius API URL/key/IP akan terisi dari master data itu dan masih bisa dioverride
+per router bila perlu.
+
+Backend akan menyebarkan profil paket dan voucher ke semua endpoint
+`radius-api` unik yang terdaftar di **Radius Server** dan NAS, sehingga voucher
+yang sama bisa dipakai di semua cabang.
 
 `radius-api` cabang adalah HTTP API, jadi boleh dipublikasikan lewat HTTPS /
 Cloudflare Tunnel. Trafik RADIUS operasional tetap lokal di cabang:

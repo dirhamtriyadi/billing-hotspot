@@ -1,5 +1,18 @@
 package models
 
+// RadiusServer is one managed radius-api endpoint, usually one branch-local
+// FreeRADIUS management API.
+type RadiusServer struct {
+	Base
+	Name        string `gorm:"size:120;uniqueIndex;not null" json:"name"`
+	APIURL      string `gorm:"column:api_url;size:255;not null" json:"api_url"`
+	APIKey      string `gorm:"column:api_key;size:255;not null;default:''" json:"api_key"`
+	RadiusIP    string `gorm:"column:radius_ip;size:128;not null;default:''" json:"radius_ip"`
+	CoAPort     string `gorm:"column:coa_port;size:10;not null;default:'3799'" json:"coa_port"`
+	Description string `gorm:"size:200;not null;default:''" json:"description"`
+	IsDefault   bool   `gorm:"column:is_default;not null;default:false" json:"is_default"`
+}
+
 // NASHotspotConfig stores billing-owned deployment settings for one Mikrotik
 // NAS, including the local radius-api endpoint for that branch. The FreeRADIUS
 // NAS row is still synced into the branch radius-api database, but the billing
@@ -15,6 +28,7 @@ type NASHotspotConfig struct {
 	Description      string `gorm:"column:description;size:200;not null;default:''" json:"description"`
 	RadiusAPIURL     string `gorm:"column:radius_api_url;size:255;not null;default:''" json:"radius_api_url"`
 	RadiusAPIKey     string `gorm:"column:radius_api_key;size:255;not null;default:''" json:"radius_api_key"`
+	RadiusServerID   *uint  `gorm:"column:radius_server_id" json:"radius_server_id"`
 	RadiusIP         string `gorm:"column:radius_ip;size:128;not null;default:''" json:"radius_ip"`
 	FrontendURL      string `gorm:"column:frontend_url;size:255;not null;default:''" json:"frontend_url"`
 	BackendURL       string `gorm:"column:backend_url;size:255;not null;default:''" json:"backend_url"`

@@ -190,6 +190,7 @@ export interface NAS {
 export interface NASHotspotConfig {
   radius_api_url: string;
   radius_api_key: string;
+  radius_server_id?: number | null;
   radius_ip: string;
   frontend_url: string;
   backend_url: string;
@@ -202,6 +203,17 @@ export interface NASHotspotConfig {
   hotspot_gateway: string;
   hotspot_pool_range: string;
   hotspot_dns: string;
+}
+
+export interface RadiusServer {
+  id: number;
+  name: string;
+  api_url: string;
+  api_key: string;
+  radius_ip: string;
+  coa_port: string;
+  description: string;
+  is_default: boolean;
 }
 
 // ─── Payment gateway settings (secrets masked on read) ───────────────────────

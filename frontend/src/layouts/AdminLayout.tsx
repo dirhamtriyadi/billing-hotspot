@@ -11,6 +11,7 @@ import {
   Menu,
   Wifi,
   Router,
+  Server,
   BarChart3,
   CreditCard,
   X,
@@ -27,6 +28,7 @@ const nav = [
   { to: "/admin/batches", label: "Batch Voucher", icon: Layers },
   { to: "/admin/orders", label: "Pesanan", icon: ShoppingCart },
   { to: "/admin/nas", label: "Router (NAS)", icon: Router },
+  { to: "/admin/radius-servers", label: "Radius Server", icon: Server },
   { to: "/admin/payment-gateways", label: "Payment Gateway", icon: CreditCard },
   { to: "/admin/settings", label: "Pengaturan", icon: Settings },
 ];

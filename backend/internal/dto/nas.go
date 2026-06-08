@@ -13,11 +13,33 @@ type NASInput struct {
 	HotspotConfig NASHotspotConfigInput `json:"hotspot_config"`
 }
 
+type RadiusServerInput struct {
+	Name        string `json:"name" binding:"required,max=120"`
+	APIURL      string `json:"api_url" binding:"required,max=255"`
+	APIKey      string `json:"api_key" binding:"max=255"`
+	RadiusIP    string `json:"radius_ip" binding:"max=128"`
+	CoAPort     string `json:"coa_port" binding:"max=10"`
+	Description string `json:"description" binding:"max=200"`
+	IsDefault   bool   `json:"is_default"`
+}
+
+type RadiusServerOutput struct {
+	ID          uint   `json:"id"`
+	Name        string `json:"name"`
+	APIURL      string `json:"api_url"`
+	APIKey      string `json:"api_key"`
+	RadiusIP    string `json:"radius_ip"`
+	CoAPort     string `json:"coa_port"`
+	Description string `json:"description"`
+	IsDefault   bool   `json:"is_default"`
+}
+
 // NASHotspotConfigInput stores billing-owned Mikrotik deployment settings. The
 // FreeRADIUS NAS record intentionally does not carry these fields.
 type NASHotspotConfigInput struct {
 	RadiusAPIURL     string `json:"radius_api_url" binding:"max=255"`
 	RadiusAPIKey     string `json:"radius_api_key" binding:"max=255"`
+	RadiusServerID   *uint  `json:"radius_server_id" binding:"omitempty,min=1"`
 	RadiusIP         string `json:"radius_ip" binding:"max=128"`
 	FrontendURL      string `json:"frontend_url" binding:"max=255"`
 	BackendURL       string `json:"backend_url" binding:"max=255"`
@@ -52,6 +74,7 @@ type NASOutput struct {
 type NASHotspotConfigOutput struct {
 	RadiusAPIURL     string `json:"radius_api_url"`
 	RadiusAPIKey     string `json:"radius_api_key"`
+	RadiusServerID   *uint  `json:"radius_server_id"`
 	RadiusIP         string `json:"radius_ip"`
 	FrontendURL      string `json:"frontend_url"`
 	BackendURL       string `json:"backend_url"`

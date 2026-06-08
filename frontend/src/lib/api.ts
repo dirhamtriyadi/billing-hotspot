@@ -15,6 +15,7 @@ import type {
   Package,
   PublicPackage,
   PublicSettings,
+  RadiusServer,
   Report,
   UserResponse,
   Voucher,
@@ -232,6 +233,24 @@ export const api = {
       unwrap<NAS>({ url: "/nas", method: "POST", data: body }),
     remove: (id: number) =>
       unwrap<null>({ url: `/nas/${id}`, method: "DELETE" }),
+  },
+
+  radiusServers: {
+    list: () => unwrap<RadiusServer[]>({ url: "/radius-servers" }),
+    create: (body: unknown) =>
+      unwrap<RadiusServer>({
+        url: "/radius-servers",
+        method: "POST",
+        data: body,
+      }),
+    update: (id: number, body: unknown) =>
+      unwrap<RadiusServer>({
+        url: `/radius-servers/${id}`,
+        method: "PUT",
+        data: body,
+      }),
+    remove: (id: number) =>
+      unwrap<null>({ url: `/radius-servers/${id}`, method: "DELETE" }),
   },
 
   reports: {

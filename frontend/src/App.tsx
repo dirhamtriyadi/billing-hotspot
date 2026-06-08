@@ -14,6 +14,7 @@ import OrdersPage from "@/pages/admin/OrdersPage";
 import SettingsPage from "@/pages/admin/SettingsPage";
 import ReportsPage from "@/pages/admin/ReportsPage";
 import NasPage from "@/pages/admin/NasPage";
+import RadiusServersPage from "@/pages/admin/RadiusServersPage";
 import PaymentGatewaysPage from "@/pages/admin/PaymentGatewaysPage";
 
 export default function App() {
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="batches" element={<BatchesPage />} />
         <Route path="orders" element={<OrdersPage />} />
         <Route path="nas" element={<NasPage />} />
+        <Route path="radius-servers" element={<RadiusServersPage />} />
         <Route path="payment-gateways" element={<PaymentGatewaysPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>

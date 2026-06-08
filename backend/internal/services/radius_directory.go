@@ -17,8 +17,9 @@ type RadiusEndpoint struct {
 	Client *radius.Client
 }
 
-// RadiusDirectory resolves all radius-api endpoints configured in NAS records.
-// Empty per-NAS values fall back to the legacy single RADIUS_API_URL/API_KEY.
+// RadiusDirectory resolves all radius-api endpoints configured in Radius Server
+// master data and NAS records. Empty per-NAS values fall back to the legacy
+// single RADIUS_API_URL/API_KEY.
 type RadiusDirectory struct {
 	db  *gorm.DB
 	cfg config.RadiusConfig
@@ -32,39 +33,49 @@ func NewRadiusDirectory(db *gorm.DB, cfg config.RadiusConfig) *RadiusDirectory {
 // legacy default endpoint is returned so older single-RADIUS installs keep
 // working.
 func (d *RadiusDirectory) Endpoints(ctx context.Context) ([]RadiusEndpoint, error) {
+	seen := map[string]struct{}{}
+	out := make([]RadiusEndpoint, 0)
+
+	var servers []models.RadiusServer
+	if err := d.db.WithContext(ctx).Find(&servers).Error; err != nil {
+		return nil, mapDBError(err)
+	}
+	for _, srv := range servers {
+		d.addEndpoint(&out, seen, srv.Name, srv.APIURL, srv.APIKey)
+	}
+
 	var rows []models.NASHotspotConfig
 	if err := d.db.WithContext(ctx).Find(&rows).Error; err != nil {
 		return nil, mapDBError(err)
 	}
 
-	seen := map[string]struct{}{}
-	out := make([]RadiusEndpoint, 0, len(rows)+1)
 	for _, row := range rows {
 		url := strings.TrimRight(defaultString(row.RadiusAPIURL, d.cfg.BaseURL), "/")
 		key := defaultString(row.RadiusAPIKey, d.cfg.APIKey)
-		if url == "" || key == "" {
-			continue
-		}
-		dedupeKey := url + "\x00" + key
-		if _, ok := seen[dedupeKey]; ok {
-			continue
-		}
-		seen[dedupeKey] = struct{}{}
-		out = append(out, RadiusEndpoint{
-			Name:   defaultString(row.ShortName, row.NASName),
-			URL:    url,
-			Client: radius.NewClientWith(url, key, d.cfg.Timeout),
-		})
+		d.addEndpoint(&out, seen, defaultString(row.ShortName, row.NASName), url, key)
 	}
 
 	if len(out) == 0 && d.cfg.BaseURL != "" && d.cfg.APIKey != "" {
 		url := strings.TrimRight(d.cfg.BaseURL, "/")
-		out = append(out, RadiusEndpoint{
-			Name:   "default",
-			URL:    url,
-			Client: radius.NewClientWith(url, d.cfg.APIKey, d.cfg.Timeout),
-		})
+		d.addEndpoint(&out, seen, "default", url, d.cfg.APIKey)
 	}
 
 	return out, nil
+}
+
+func (d *RadiusDirectory) addEndpoint(out *[]RadiusEndpoint, seen map[string]struct{}, name, url, key string) {
+	url = strings.TrimRight(url, "/")
+	if url == "" || key == "" {
+		return
+	}
+	dedupeKey := url + "\x00" + key
+	if _, ok := seen[dedupeKey]; ok {
+		return
+	}
+	seen[dedupeKey] = struct{}{}
+	*out = append(*out, RadiusEndpoint{
+		Name:   defaultString(name, url),
+		URL:    url,
+		Client: radius.NewClientWith(url, key, d.cfg.Timeout),
+	})
 }

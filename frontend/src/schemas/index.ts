@@ -65,6 +65,9 @@ export type BatchValues = z.infer<typeof batchSchema>;
 const nasHotspotConfigSchema = z.object({
   radius_api_url: z.string().max(255, "Maksimal 255 karakter").optional(),
   radius_api_key: z.string().max(255, "Maksimal 255 karakter").optional(),
+  radius_server_id: z
+    .union([z.literal(""), z.coerce.number().int().min(1)])
+    .optional(),
   radius_ip: z.string().max(128, "Maksimal 128 karakter").optional(),
   frontend_url: z.string().max(255, "Maksimal 255 karakter").optional(),
   backend_url: z.string().max(255, "Maksimal 255 karakter").optional(),
@@ -78,6 +81,17 @@ const nasHotspotConfigSchema = z.object({
   hotspot_pool_range: z.string().max(128, "Maksimal 128 karakter").optional(),
   hotspot_dns: z.string().max(128, "Maksimal 128 karakter").optional(),
 });
+
+export const radiusServerSchema = z.object({
+  name: z.string().min(1, "Nama wajib diisi").max(120),
+  api_url: z.string().min(1, "Radius API URL wajib diisi").max(255),
+  api_key: z.string().max(255).optional(),
+  radius_ip: z.string().max(128).optional(),
+  coa_port: z.string().max(10).optional(),
+  description: z.string().max(200).optional(),
+  is_default: z.boolean(),
+});
+export type RadiusServerValues = z.infer<typeof radiusServerSchema>;
 
 export const nasSchema = z.object({
   nasname: z

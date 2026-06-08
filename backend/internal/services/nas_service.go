@@ -73,6 +73,7 @@ func (s *NasService) Upsert(ctx context.Context, in dto.NASInput) (*dto.NASOutpu
 			"description",
 			"radius_api_url",
 			"radius_api_key",
+			"radius_server_id",
 			"radius_ip",
 			"frontend_url",
 			"backend_url",
@@ -116,6 +117,19 @@ func (s *NasService) Delete(ctx context.Context, id uint) error {
 
 func (s *NasService) configFromInput(nasname string, in dto.NASInput) models.NASHotspotConfig {
 	hotspot := in.HotspotConfig
+	radiusAPIURL := hotspot.RadiusAPIURL
+	radiusAPIKey := hotspot.RadiusAPIKey
+	radiusIP := hotspot.RadiusIP
+	coaPort := hotspot.CoAPort
+	if hotspot.RadiusServerID != nil {
+		var srv models.RadiusServer
+		if err := s.db.Where("id = ?", *hotspot.RadiusServerID).First(&srv).Error; err == nil {
+			radiusAPIURL = defaultString(radiusAPIURL, srv.APIURL)
+			radiusAPIKey = defaultString(radiusAPIKey, srv.APIKey)
+			radiusIP = defaultString(radiusIP, srv.RadiusIP)
+			coaPort = defaultString(coaPort, srv.CoAPort)
+		}
+	}
 	return models.NASHotspotConfig{
 		NASName:          nasname,
 		ShortName:        in.ShortName,
@@ -123,13 +137,14 @@ func (s *NasService) configFromInput(nasname string, in dto.NASInput) models.NAS
 		Ports:            in.Ports,
 		Secret:           in.Secret,
 		Description:      in.Description,
-		RadiusAPIURL:     strings.TrimRight(hotspot.RadiusAPIURL, "/"),
-		RadiusAPIKey:     hotspot.RadiusAPIKey,
-		RadiusIP:         hotspot.RadiusIP,
+		RadiusAPIURL:     strings.TrimRight(radiusAPIURL, "/"),
+		RadiusAPIKey:     radiusAPIKey,
+		RadiusServerID:   hotspot.RadiusServerID,
+		RadiusIP:         radiusIP,
 		FrontendURL:      strings.TrimRight(defaultString(hotspot.FrontendURL, s.app.FrontendURL), "/"),
 		BackendURL:       strings.TrimRight(defaultString(hotspot.BackendURL, s.app.BaseURL), "/"),
 		FrontendHost:     hotspot.FrontendHost,
-		CoAPort:          defaultString(hotspot.CoAPort, "3799"),
+		CoAPort:          defaultString(coaPort, "3799"),
 		WANInterface:     defaultString(hotspot.WANInterface, "ether1"),
 		HotspotInterface: defaultString(hotspot.HotspotInterface, "bridge-hotspot"),
 		BridgePorts:      defaultString(hotspot.BridgePorts, "wlan1,wlan2"),
@@ -152,6 +167,7 @@ func outputFromConfig(cfg models.NASHotspotConfig) dto.NASOutput {
 		HotspotConfig: dto.NASHotspotConfigOutput{
 			RadiusAPIURL:     cfg.RadiusAPIURL,
 			RadiusAPIKey:     cfg.RadiusAPIKey,
+			RadiusServerID:   cfg.RadiusServerID,
 			RadiusIP:         cfg.RadiusIP,
 			FrontendURL:      cfg.FrontendURL,
 			BackendURL:       cfg.BackendURL,

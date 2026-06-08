@@ -46,6 +46,7 @@ func New(cfg *config.Config, db *gorm.DB) *gin.Engine {
 	settingSvc := services.NewSettingService(db)
 	gatewaySvc := services.NewGatewayService(settingSvc, cfg.Payment, paymentRegistry)
 	nasSvc := services.NewNasService(db, cfg.App, cfg.Radius)
+	radiusServerSvc := services.NewRadiusServerService(db)
 	reportSvc := services.NewReportService(db)
 
 	// Apply any DB-stored gateway credentials on top of the env defaults so the
@@ -64,6 +65,7 @@ func New(cfg *config.Config, db *gorm.DB) *gin.Engine {
 	settingH := handlers.NewSettingHandler(settingSvc)
 	gatewayH := handlers.NewGatewayHandler(gatewaySvc)
 	nasH := handlers.NewNasHandler(nasSvc)
+	radiusServerH := handlers.NewRadiusServerHandler(radiusServerSvc)
 	reportH := handlers.NewReportHandler(reportSvc)
 	hotspotH := handlers.NewHotspotHandler(cfg.App)
 	publicH := handlers.NewPublicHandler(pkgSvc, orderSvc, settingSvc, paymentRegistry)
@@ -111,6 +113,10 @@ func New(cfg *config.Config, db *gorm.DB) *gin.Engine {
 		authed.GET("/nas", nasH.List)
 		authed.POST("/nas", nasH.Upsert)
 		authed.DELETE("/nas/:id", nasH.Delete)
+		authed.GET("/radius-servers", radiusServerH.List)
+		authed.POST("/radius-servers", radiusServerH.Create)
+		authed.PUT("/radius-servers/:id", radiusServerH.Update)
+		authed.DELETE("/radius-servers/:id", radiusServerH.Delete)
 
 		authed.GET("/packages", pkgH.List)
 		authed.POST("/packages", pkgH.Create)
