@@ -16,6 +16,8 @@ type NASInput struct {
 // NASHotspotConfigInput stores billing-owned Mikrotik deployment settings. The
 // FreeRADIUS NAS record intentionally does not carry these fields.
 type NASHotspotConfigInput struct {
+	RadiusAPIURL     string `json:"radius_api_url" binding:"max=255"`
+	RadiusAPIKey     string `json:"radius_api_key" binding:"max=255"`
 	RadiusIP         string `json:"radius_ip" binding:"max=128"`
 	FrontendHost     string `json:"frontend_host" binding:"max=128"`
 	CoAPort          string `json:"coa_port" binding:"max=10"`
@@ -46,6 +48,8 @@ type NASOutput struct {
 // NASHotspotConfigOutput is the persisted script-generation profile for one
 // NAS. Empty radius/frontend hosts mean the frontend can derive local defaults.
 type NASHotspotConfigOutput struct {
+	RadiusAPIURL     string `json:"radius_api_url"`
+	RadiusAPIKey     string `json:"radius_api_key"`
 	RadiusIP         string `json:"radius_ip"`
 	FrontendHost     string `json:"frontend_host"`
 	CoAPort          string `json:"coa_port"`

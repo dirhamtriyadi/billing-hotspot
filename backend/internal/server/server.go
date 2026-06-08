@@ -12,7 +12,6 @@ import (
 	"github.com/dirhamt/billing-hotspot/backend/internal/handlers"
 	"github.com/dirhamt/billing-hotspot/backend/internal/middleware"
 	"github.com/dirhamt/billing-hotspot/backend/internal/payment"
-	"github.com/dirhamt/billing-hotspot/backend/internal/radius"
 	"github.com/dirhamt/billing-hotspot/backend/internal/response"
 	"github.com/dirhamt/billing-hotspot/backend/internal/services"
 	"github.com/gin-gonic/gin"
@@ -36,17 +35,17 @@ func New(cfg *config.Config, db *gorm.DB) *gin.Engine {
 	)
 
 	// External clients and services.
-	radiusClient := radius.NewClient(cfg.Radius)
+	radiusDirectory := services.NewRadiusDirectory(db, cfg.Radius)
 	paymentRegistry := payment.NewRegistry(cfg.Payment)
 
 	authSvc := services.NewAuthService(db, cfg.JWT)
-	pkgSvc := services.NewPackageService(db, radiusClient)
-	voucherSvc := services.NewVoucherService(db, radiusClient)
+	pkgSvc := services.NewPackageService(db, radiusDirectory)
+	voucherSvc := services.NewVoucherService(db, radiusDirectory)
 	orderSvc := services.NewOrderService(db, paymentRegistry, voucherSvc, cfg.App)
 	dashSvc := services.NewDashboardService(db)
 	settingSvc := services.NewSettingService(db)
 	gatewaySvc := services.NewGatewayService(settingSvc, cfg.Payment, paymentRegistry)
-	nasSvc := services.NewNasService(radiusClient, db)
+	nasSvc := services.NewNasService(db, cfg.Radius)
 	reportSvc := services.NewReportService(db)
 
 	// Apply any DB-stored gateway credentials on top of the env defaults so the

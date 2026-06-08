@@ -1,11 +1,20 @@
 package models
 
 // NASHotspotConfig stores billing-owned deployment settings for one Mikrotik
-// NAS. It is keyed by nasname because the authoritative FreeRADIUS NAS row
-// lives in the radius-api database.
+// NAS, including the local radius-api endpoint for that branch. The FreeRADIUS
+// NAS row is still synced into the branch radius-api database, but the billing
+// app keeps this local copy so it can support multiple independent RADIUS
+// servers.
 type NASHotspotConfig struct {
 	Base
 	NASName          string `gorm:"column:nasname;size:128;uniqueIndex;not null" json:"nasname"`
+	ShortName        string `gorm:"column:shortname;size:32;not null;default:''" json:"shortname"`
+	Type             string `gorm:"column:type;size:30;not null;default:'mikrotik'" json:"type"`
+	Ports            *int   `gorm:"column:ports" json:"ports"`
+	Secret           string `gorm:"column:secret;size:60;not null;default:''" json:"secret"`
+	Description      string `gorm:"column:description;size:200;not null;default:''" json:"description"`
+	RadiusAPIURL     string `gorm:"column:radius_api_url;size:255;not null;default:''" json:"radius_api_url"`
+	RadiusAPIKey     string `gorm:"column:radius_api_key;size:255;not null;default:''" json:"radius_api_key"`
 	RadiusIP         string `gorm:"column:radius_ip;size:128;not null;default:''" json:"radius_ip"`
 	FrontendHost     string `gorm:"size:128;not null;default:''" json:"frontend_host"`
 	CoAPort          string `gorm:"column:coa_port;size:10;not null;default:'3799'" json:"coa_port"`

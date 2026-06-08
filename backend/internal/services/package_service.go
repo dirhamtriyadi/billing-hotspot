@@ -8,7 +8,6 @@ import (
 	"github.com/dirhamt/billing-hotspot/backend/internal/apperror"
 	"github.com/dirhamt/billing-hotspot/backend/internal/dto"
 	"github.com/dirhamt/billing-hotspot/backend/internal/models"
-	"github.com/dirhamt/billing-hotspot/backend/internal/radius"
 	"github.com/dirhamt/billing-hotspot/backend/internal/util"
 	"gorm.io/gorm"
 )
@@ -17,11 +16,11 @@ import (
 // in sync via the radius-api.
 type PackageService struct {
 	db     *gorm.DB
-	radius *radius.Client
+	radius *RadiusDirectory
 }
 
 // NewPackageService builds a PackageService.
-func NewPackageService(db *gorm.DB, r *radius.Client) *PackageService {
+func NewPackageService(db *gorm.DB, r *RadiusDirectory) *PackageService {
 	return &PackageService{db: db, radius: r}
 }
 
@@ -187,11 +186,22 @@ func (s *PackageService) uniqueSlug(ctx context.Context, base string) (string, e
 // syncProfile pushes the package's attributes to the radius-api. Failures are
 // logged but not fatal: provisioning a voucher re-upserts the profile anyway.
 func (s *PackageService) syncProfile(ctx context.Context, p models.Package) {
-	if err := s.radius.UpsertProfile(ctx, buildProfile(p)); err != nil {
+	endpoints, err := s.radius.Endpoints(ctx)
+	if err != nil {
 		slog.Warn("failed to sync radius profile",
 			slog.String("profile", p.Profile),
 			slog.Any("error", err),
 		)
+		return
+	}
+	for _, endpoint := range endpoints {
+		if err := endpoint.Client.UpsertProfile(ctx, buildProfile(p)); err != nil {
+			slog.Warn("failed to sync radius profile",
+				slog.String("profile", p.Profile),
+				slog.String("radius_api", endpoint.URL),
+				slog.Any("error", err),
+			)
+		}
 	}
 }
 

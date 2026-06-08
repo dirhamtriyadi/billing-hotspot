@@ -47,8 +47,7 @@ func (s *VoucherService) DeleteBatch(ctx context.Context, id uint) error {
 	}
 	for _, v := range vouchers {
 		if v.SyncedToRadius {
-			_ = s.radius.DisconnectUser(ctx, v.Code)
-			_ = s.radius.DeleteUser(ctx, v.Code)
+			s.revokeBestEffort(ctx, v.Code, "batch delete")
 		}
 	}
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {

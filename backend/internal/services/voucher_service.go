@@ -17,11 +17,11 @@ import (
 // VoucherService manages voucher lifecycle and FreeRADIUS provisioning.
 type VoucherService struct {
 	db     *gorm.DB
-	radius *radius.Client
+	radius *RadiusDirectory
 }
 
 // NewVoucherService builds a VoucherService.
-func NewVoucherService(db *gorm.DB, r *radius.Client) *VoucherService {
+func NewVoucherService(db *gorm.DB, r *RadiusDirectory) *VoucherService {
 	return &VoucherService{db: db, radius: r}
 }
 
@@ -163,11 +163,7 @@ func (s *VoucherService) Delete(ctx context.Context, id uint) error {
 		return err
 	}
 	if v.SyncedToRadius {
-		_ = s.radius.DisconnectUser(ctx, v.Code)
-		if err := s.radius.DeleteUser(ctx, v.Code); err != nil {
-			slog.Warn("failed to delete radius user during voucher delete",
-				slog.String("code", v.Code), slog.Any("error", err))
-		}
+		s.revokeBestEffort(ctx, v.Code, "voucher delete")
 	}
 	if err := s.db.WithContext(ctx).Delete(&models.Voucher{}, id).Error; err != nil {
 		return mapDBError(err)
@@ -216,16 +212,22 @@ func (s *VoucherService) IssueForOrder(ctx context.Context, order *models.Order)
 // provision upserts the package profile and creates the radius user, then marks
 // the voucher active + synced.
 func (s *VoucherService) provision(ctx context.Context, v *models.Voucher, p *models.Package) error {
-	if err := s.radius.UpsertProfile(ctx, buildProfile(*p)); err != nil {
+	endpoints, err := s.radius.Endpoints(ctx)
+	if err != nil {
 		return err
 	}
-	if err := s.radius.CreateUser(ctx, radius.User{
-		Username:  v.Code,
-		Password:  v.Code,
-		Profile:   p.Profile,
-		ExpiresAt: v.ExpiresAt,
-	}); err != nil {
-		return err
+	for _, endpoint := range endpoints {
+		if err := endpoint.Client.UpsertProfile(ctx, buildProfile(*p)); err != nil {
+			return err
+		}
+		if err := endpoint.Client.CreateUser(ctx, radius.User{
+			Username:  v.Code,
+			Password:  v.Code,
+			Profile:   p.Profile,
+			ExpiresAt: v.ExpiresAt,
+		}); err != nil {
+			return err
+		}
 	}
 	v.SyncedToRadius = true
 	v.Status = models.VoucherActive
@@ -235,8 +237,7 @@ func (s *VoucherService) provision(ctx context.Context, v *models.Voucher, p *mo
 
 // revoke deletes the radius user and marks the voucher disabled.
 func (s *VoucherService) revoke(ctx context.Context, v *models.Voucher) error {
-	_ = s.radius.DisconnectUser(ctx, v.Code)
-	if err := s.radius.DeleteUser(ctx, v.Code); err != nil {
+	if err := s.revokeEverywhere(ctx, v.Code); err != nil {
 		return err
 	}
 	v.SyncedToRadius = false
@@ -253,8 +254,9 @@ func (s *VoucherService) provisionBatch(ctx context.Context, batch *models.Vouch
 		return
 	}
 
-	if err := s.radius.UpsertProfile(ctx, buildProfile(p)); err != nil {
-		slog.Warn("batch profile sync failed", slog.String("profile", p.Profile), slog.Any("error", err))
+	endpoints, err := s.radius.Endpoints(ctx)
+	if err != nil {
+		slog.Warn("failed to resolve radius endpoints for batch provisioning", slog.Any("error", err))
 		return
 	}
 
@@ -265,15 +267,54 @@ func (s *VoucherService) provisionBatch(ctx context.Context, batch *models.Vouch
 		ids = append(ids, v.ID)
 	}
 
-	if err := s.radius.CreateUsers(ctx, users); err != nil {
-		slog.Error("batch radius provisioning failed — vouchers need re-sync",
-			slog.Uint64("batch_id", uint64(batch.ID)), slog.Any("error", err))
-		return
+	for _, endpoint := range endpoints {
+		if err := endpoint.Client.UpsertProfile(ctx, buildProfile(p)); err != nil {
+			slog.Warn("batch profile sync failed",
+				slog.String("profile", p.Profile),
+				slog.String("radius_api", endpoint.URL),
+				slog.Any("error", err))
+			return
+		}
+		if err := endpoint.Client.CreateUsers(ctx, users); err != nil {
+			slog.Error("batch radius provisioning failed — vouchers need re-sync",
+				slog.Uint64("batch_id", uint64(batch.ID)),
+				slog.String("radius_api", endpoint.URL),
+				slog.Any("error", err))
+			return
+		}
 	}
 
 	if err := s.db.WithContext(ctx).Model(&models.Voucher{}).Where("id IN ?", ids).
 		Updates(map[string]interface{}{"synced_to_radius": true, "status": models.VoucherActive}).Error; err != nil {
 		slog.Warn("failed to mark batch vouchers active", slog.Any("error", err))
+	}
+}
+
+func (s *VoucherService) revokeEverywhere(ctx context.Context, code string) error {
+	endpoints, err := s.radius.Endpoints(ctx)
+	if err != nil {
+		return err
+	}
+	var lastErr error
+	for _, endpoint := range endpoints {
+		_ = endpoint.Client.DisconnectUser(ctx, code)
+		if err := endpoint.Client.DeleteUser(ctx, code); err != nil {
+			lastErr = err
+			slog.Warn("failed to delete radius user",
+				slog.String("code", code),
+				slog.String("radius_api", endpoint.URL),
+				slog.Any("error", err))
+		}
+	}
+	return lastErr
+}
+
+func (s *VoucherService) revokeBestEffort(ctx context.Context, code, reason string) {
+	if err := s.revokeEverywhere(ctx, code); err != nil {
+		slog.Warn("failed to revoke radius user everywhere",
+			slog.String("code", code),
+			slog.String("reason", reason),
+			slog.Any("error", err))
 	}
 }
 

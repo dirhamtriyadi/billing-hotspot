@@ -55,6 +55,8 @@ const defaults: NasValues = {
   description: "",
   ports: "",
   hotspot_config: {
+    radius_api_url: "",
+    radius_api_key: "",
     radius_ip: "",
     frontend_host: "",
     coa_port: "3799",
@@ -338,6 +340,30 @@ export default function NasPage() {
                 </p>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
+                <Field
+                  label="Radius API URL Cabang"
+                  error={
+                    form.formState.errors.hotspot_config?.radius_api_url
+                      ?.message
+                  }
+                >
+                  <Input
+                    placeholder="https://radius-bandung.example.com / kosong = env default"
+                    {...form.register("hotspot_config.radius_api_url")}
+                  />
+                </Field>
+                <Field
+                  label="Radius API Key Cabang"
+                  error={
+                    form.formState.errors.hotspot_config?.radius_api_key
+                      ?.message
+                  }
+                >
+                  <Input
+                    placeholder="kosong = env RADIUS_API_KEY"
+                    {...form.register("hotspot_config.radius_api_key")}
+                  />
+                </Field>
                 <Field
                   label="IP Server RADIUS"
                   error={

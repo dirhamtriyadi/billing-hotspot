@@ -243,6 +243,18 @@ Pesanan (paid) ─► backend mints Voucher ─► POST radius-api /users
 - **Disable / hapus voucher** → user dihapus dari RADIUS + **Disconnect-Request**
   (CoA) dikirim ke Mikrotik untuk memutus sesi yang sedang aktif.
 
+### Multi-cabang dengan RADIUS lokal
+
+Untuk cabang yang masing-masing punya FreeRADIUS lokal, isi **Radius API URL
+Cabang** dan **Radius API Key Cabang** pada menu **Admin → Router (NAS)**.
+Backend akan menyebarkan profil paket dan voucher ke semua endpoint `radius-api`
+unik yang terdaftar, sehingga voucher yang sama bisa dipakai di semua cabang.
+
+`radius-api` cabang adalah HTTP API, jadi boleh dipublikasikan lewat HTTPS /
+Cloudflare Tunnel. Trafik RADIUS operasional tetap lokal di cabang:
+Mikrotik cabang → FreeRADIUS cabang UDP `1812/1813`, dan CoA/Disconnect UDP
+`3799` dari `radius-api` cabang ke Mikrotik cabang.
+
 ---
 
 ## 📁 Struktur proyek

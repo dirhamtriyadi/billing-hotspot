@@ -25,10 +25,16 @@ type Client struct {
 
 // NewClient builds a radius-api client from configuration.
 func NewClient(cfg config.RadiusConfig) *Client {
+	return NewClientWith(cfg.BaseURL, cfg.APIKey, cfg.Timeout)
+}
+
+// NewClientWith builds a radius-api client from explicit endpoint values. It is
+// used for multi-branch deployments where every branch has its own radius-api.
+func NewClientWith(baseURL, apiKey string, timeout time.Duration) *Client {
 	return &Client{
-		baseURL: cfg.BaseURL,
-		apiKey:  cfg.APIKey,
-		http:    &http.Client{Timeout: cfg.Timeout},
+		baseURL: baseURL,
+		apiKey:  apiKey,
+		http:    &http.Client{Timeout: timeout},
 	}
 }
 
