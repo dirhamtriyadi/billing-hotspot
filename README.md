@@ -216,6 +216,19 @@ Script otomatis: daftar RADIUS, aktifkan CoA (3799), IP pool + DHCP, hotspot
 bayar sebelum login). Secret di script otomatis sama dengan NAS yang dipilih.
 Tersedia juga tombol **Salin Teardown** untuk menghapus konfigurasi `billing-*`.
 
+Jika frontend dan backend dipublikasikan di domain/subdomain berbeda, isi field
+NAS secara eksplisit:
+
+- **URL Frontend / Storefront**: URL yang dibuka pelanggan hotspot untuk beli
+  paket, mis. `https://wifi.example.com`.
+- **URL Backend API**: URL backend yang bisa dijangkau Mikrotik untuk mengambil
+  `login.html`, mis. `https://api.example.com`.
+
+Generator script akan memasukkan keduanya ke walled garden sebelum login. Untuk
+redirect setelah pembayaran dan webhook gateway, tetap atur env backend:
+`FRONTEND_URL=https://wifi.example.com` dan
+`APP_BASE_URL=https://api.example.com`.
+
 > Menambahkan router lewat panel **otomatis tersimpan ke tabel `nas`** di
 > database RADIUS (dibaca FreeRADIUS via `read_clients`). Lihat catatan di bawah
 > soal kapan FreeRADIUS perlu di-reload.

@@ -19,6 +19,8 @@ type NASHotspotConfigInput struct {
 	RadiusAPIURL     string `json:"radius_api_url" binding:"max=255"`
 	RadiusAPIKey     string `json:"radius_api_key" binding:"max=255"`
 	RadiusIP         string `json:"radius_ip" binding:"max=128"`
+	FrontendURL      string `json:"frontend_url" binding:"max=255"`
+	BackendURL       string `json:"backend_url" binding:"max=255"`
 	FrontendHost     string `json:"frontend_host" binding:"max=128"`
 	CoAPort          string `json:"coa_port" binding:"max=10"`
 	WANInterface     string `json:"wan_interface" binding:"max=60"`
@@ -51,6 +53,8 @@ type NASHotspotConfigOutput struct {
 	RadiusAPIURL     string `json:"radius_api_url"`
 	RadiusAPIKey     string `json:"radius_api_key"`
 	RadiusIP         string `json:"radius_ip"`
+	FrontendURL      string `json:"frontend_url"`
+	BackendURL       string `json:"backend_url"`
 	FrontendHost     string `json:"frontend_host"`
 	CoAPort          string `json:"coa_port"`
 	WANInterface     string `json:"wan_interface"`

@@ -54,13 +54,15 @@ export interface MikrotikParams {
   hsPoolRange: string;
   /** Upstream DNS servers (comma-separated). */
   hsDNS: string;
-  /** Host serving the frontend + backend API (IP or domain, no scheme). */
-  feHost: string;
+  /** Storefront opened by hotspot users before login. */
+  frontendURL: string;
+  /** Backend API endpoint the router can reach to fetch login.html. */
+  backendURL: string;
 }
 
 const defaultMikrotikParams: Omit<
   MikrotikParams,
-  "radiusIP" | "radiusSecret" | "feHost"
+  "radiusIP" | "radiusSecret" | "frontendURL" | "backendURL"
 > = {
   coaPort: "3799",
   // WAN uplink to the internet (ISP/modem side). ether1 is the hAP ac2 default.
@@ -101,6 +103,13 @@ function configuredBackendURL(): string {
   }
 
   return fromWindow || "http://localhost:8080";
+}
+
+function configuredFrontendURL(): string {
+  if (typeof window !== "undefined" && window.location.host) {
+    return `${window.location.protocol}//${window.location.host}`;
+  }
+  return "http://localhost:8088";
 }
 
 function configuredBackendHost(): string {
@@ -152,19 +161,62 @@ function normalizeBackendBase(value: string): string {
   return trimURLPath(url);
 }
 
-function routerReachableHost(host?: string): string {
+function normalizePublicURL(value: string | undefined, fallback: string): string {
+  const raw = (value || "").trim();
+  if (!raw) return fallback;
+  return normalizeHTTPBase(raw);
+}
+
+function legacyHostToBackendURL(host?: string): string {
   const normalized = (host || "").trim();
-  if (!normalized) return configuredBackendHost();
+  if (!normalized) return configuredBackendURL();
   try {
     if (isLocalHost(new URL(normalizeHTTPBase(normalized)).hostname)) {
-      return configuredBackendHost();
+      return configuredBackendURL();
     }
   } catch {
     if (isLocalHost(normalized.replace(/:\d+$/, ""))) {
-      return configuredBackendHost();
+      return configuredBackendURL();
     }
   }
-  return normalized;
+  return normalizeBackendBase(normalized);
+}
+
+function legacyHostToFrontendURL(host?: string): string {
+  const normalized = (host || "").trim();
+  if (!normalized) return configuredFrontendURL();
+  try {
+    if (isLocalHost(new URL(normalizeHTTPBase(normalized)).hostname)) {
+      return configuredFrontendURL();
+    }
+  } catch {
+    if (isLocalHost(normalized.replace(/:\d+$/, ""))) {
+      return configuredFrontendURL();
+    }
+  }
+  const endpoint = normalizeHTTPBase(normalized);
+  const url = new URL(endpoint);
+  if (url.port) return trimURLPath(url);
+
+  const frontend = new URL(configuredFrontendURL());
+  if (frontend.port && !isLocalHost(frontend.hostname)) {
+    url.port = frontend.port;
+  }
+  return trimURLPath(url);
+}
+
+function routerReachableRadiusIP(host?: string): string {
+  const normalized = (host || "").trim();
+  if (!normalized) return configuredBackendHost();
+  try {
+    const hostname = new URL(normalizeHTTPBase(normalized)).hostname;
+    if (isLocalHost(hostname)) return configuredBackendHost();
+    return hostname;
+  } catch {
+    const withoutPort = normalized.replace(/:\d+$/, "");
+    if (isLocalHost(withoutPort)) return configuredBackendHost();
+    return normalized;
+  }
 }
 
 /** Derive sensible network defaults + the secret from a NAS record. */
@@ -174,10 +226,18 @@ export function paramsFromNas(
 ): MikrotikParams {
   const cfg = nas.hotspot_config;
   const host = configuredBackendHost();
+  const legacyHost = cfg?.frontend_host;
   return {
-    radiusIP: routerReachableHost(cfg?.radius_ip) || host,
+    radiusIP: routerReachableRadiusIP(cfg?.radius_ip) || host,
     radiusSecret: nas.secret,
-    feHost: routerReachableHost(cfg?.frontend_host) || host,
+    frontendURL: normalizePublicURL(
+      cfg?.frontend_url,
+      legacyHostToFrontendURL(legacyHost),
+    ),
+    backendURL: normalizePublicURL(
+      cfg?.backend_url,
+      legacyHostToBackendURL(legacyHost),
+    ),
     ...defaultMikrotikParams,
     coaPort: cfg?.coa_port || defaultMikrotikParams.coaPort,
     wanInterface: cfg?.wan_interface || defaultMikrotikParams.wanInterface,
@@ -193,28 +253,38 @@ export function paramsFromNas(
   };
 }
 
-/** Best-effort storefront URL using the same host and current frontend port. */
-export function storeUrlFromParams(p: { feHost: string }): string {
-  const endpoint = normalizeHTTPBase(p.feHost);
-  const frontendPort =
-    typeof window !== "undefined" && window.location.port
-      ? window.location.port
-      : "8088";
-  if (!endpoint) return `http://${configuredBackendHost()}:${frontendPort}`;
-  const url = new URL(endpoint);
-  return `${url.protocol}//${url.hostname}:${frontendPort}`;
+export function storeUrlFromParams(p: { frontendURL: string }): string {
+  return normalizePublicURL(p.frontendURL, configuredFrontendURL());
 }
 
 /** Backend API base the router fetches login.html from. */
-function backendUrlFromParams(p: { feHost: string }): string {
-  return normalizeBackendBase(p.feHost);
+function backendUrlFromParams(p: { backendURL: string }): string {
+  return normalizeBackendBase(p.backendURL);
+}
+
+function walledGardenTarget(value: string): { target: string; isIP: boolean } {
+  const url = new URL(normalizeHTTPBase(value));
+  const target = url.hostname;
+  return {
+    target,
+    isIP: /^\d{1,3}(\.\d{1,3}){3}$/.test(target),
+  };
+}
+
+function walledGardenRule(value: string): string {
+  const { target, isIP } = walledGardenTarget(value);
+  return isIP
+    ? `/ip hotspot walled-garden ip add dst-address=${target} action=accept comment="billing-wg"`
+    : `/ip hotspot walled-garden add dst-host="${target}" action=allow comment="billing-wg"`;
 }
 
 /** Build the full setup .rsc script text. */
 export function generateMikrotikScript(p: MikrotikParams): string {
   const storeUrl = storeUrlFromParams(p);
+  const backendURL = backendUrlFromParams(p);
+  const fetchMode = new URL(backendURL).protocol === "https:" ? "https" : "http";
   const loginFetchUrl =
-    `${backendUrlFromParams(p)}/api/v1/public/hotspot/login.html` +
+    `${backendURL}/api/v1/public/hotspot/login.html` +
     `?store=${encodeURIComponent(storeUrl)}`;
   const ports = (p.bridgePorts || "")
     .split(",")
@@ -227,14 +297,15 @@ export function generateMikrotikScript(p: MikrotikParams): string {
   // instead of a hardcoded /24.
   const prefix = (p.hsNetwork.split("/")[1] || "24").trim();
 
-  // The walled garden must allow the storefront/backend host BEFORE login. When
-  // feHost is an IP, RouterOS dst-host matching does not catch it, so we add it
-  // by dst-address (IP rule). When it's a hostname we add it as dst-host.
-  const fe = (p.feHost || "")
-    .trim()
-    .replace(/^https?:\/\//, "")
-    .replace(/[:/].*$/, "");
-  const feIsIP = /^\d{1,3}(\.\d{1,3}){3}$/.test(fe);
+  // The walled garden must allow both the storefront and backend API before
+  // login. When either is an IP, RouterOS dst-host matching does not catch it,
+  // so we add it by dst-address.
+  const storefrontRule = walledGardenRule(storeUrl);
+  const backendRule = walledGardenRule(backendURL);
+  const appRules =
+    storefrontRule === backendRule
+      ? storefrontRule
+      : `${storefrontRule}\n${backendRule}`;
   // Step labels are 1-based; the total adjusts to whether the optional bridge
   // step is present (8 with bridge, 7 without) so "[n/total]" reads correctly.
   // s(n) takes the bridge-mode step number (2..8) and shifts it down by 1 when
@@ -368,12 +439,9 @@ ${bridgeBlock}# --- RADIUS -----------------------------------------------------
 /system scheduler remove [find where name="billing-resolve"]
 /system script remove [find where name="billing-resolve"]
 
-# (1) Server storefront — supaya pelanggan bisa lihat paket & terima voucher.
-${
-  feIsIP
-    ? `/ip hotspot walled-garden ip add dst-address=${fe} action=accept comment="billing-wg"`
-    : `/ip hotspot walled-garden add dst-host="${fe}" action=allow comment="billing-wg"`
-}
+# (1) Storefront + backend API — supaya pelanggan bisa lihat paket, bayar,
+# router bisa mengunduh login.html, dan halaman status bisa cek voucher.
+${appRules}
 
 # (2) Range IP gateway pembayaran (Midtrans) — agar halaman Snap bisa dibuka &
 # dibayar langsung dari hotspot tanpa blank/connection-closed. Pakai IP karena
@@ -393,7 +461,7 @@ ${PAYMENT_IP_RANGES.map(
 # login.html bawaan tetap utuh (tidak jadi 404).
 :put "[${s(8)}] Memasang halaman login custom..."
 :do {
-  /tool fetch url="${loginFetchUrl}" mode=http dst-path=flash/hotspot/login.custom
+  /tool fetch url="${loginFetchUrl}" mode=${fetchMode} dst-path=flash/hotspot/login.custom
   :delay 1s
   :if ([:len [/file find where name="flash/hotspot/login.custom"]] > 0) do={
     /file remove [find where name="flash/hotspot/login.html"]
@@ -401,9 +469,9 @@ ${PAYMENT_IP_RANGES.map(
     :put "  login.html custom terpasang."
   }
 } on-error={
-  :put "  GAGAL mengunduh login.html dari ${backendUrlFromParams(p)}."
+  :put "  GAGAL mengunduh login.html dari ${backendURL}."
   :put "  login.html bawaan dibiarkan utuh. Setelah server siap, ulangi:"
-  :put "  /tool fetch url=\\"${loginFetchUrl}\\" mode=http dst-path=flash/hotspot/login.html"
+  :put "  /tool fetch url=\\"${loginFetchUrl}\\" mode=${fetchMode} dst-path=flash/hotspot/login.html"
 }
 
 :put "Selesai! Hotspot Billing siap."

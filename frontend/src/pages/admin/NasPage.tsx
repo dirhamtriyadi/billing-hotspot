@@ -58,6 +58,8 @@ const defaults: NasValues = {
     radius_api_url: "",
     radius_api_key: "",
     radius_ip: "",
+    frontend_url: "",
+    backend_url: "",
     frontend_host: "",
     coa_port: "3799",
     wan_interface: "ether1",
@@ -376,14 +378,25 @@ export default function NasPage() {
                   />
                 </Field>
                 <Field
-                  label="Host Frontend/Backend"
+                  label="URL Frontend / Storefront"
                   error={
-                    form.formState.errors.hotspot_config?.frontend_host?.message
+                    form.formState.errors.hotspot_config?.frontend_url?.message
                   }
                 >
                   <Input
-                    placeholder="kosong = host backend saat ini"
-                    {...form.register("hotspot_config.frontend_host")}
+                    placeholder="https://wifi.example.com / kosong = URL frontend saat ini"
+                    {...form.register("hotspot_config.frontend_url")}
+                  />
+                </Field>
+                <Field
+                  label="URL Backend API"
+                  error={
+                    form.formState.errors.hotspot_config?.backend_url?.message
+                  }
+                >
+                  <Input
+                    placeholder="https://api.example.com / kosong = VITE_API_BASE_URL"
+                    {...form.register("hotspot_config.backend_url")}
                   />
                 </Field>
                 <Field
@@ -540,9 +553,12 @@ function ScriptDialog({ nas, onClose }: { nas: NAS; onClose: () => void }) {
     : p.hsInterface === "bridge"
       ? "builtin"
       : "single";
-  const feHostIsLocal =
-    p.feHost.trim().toLowerCase() === "localhost" ||
-    p.feHost.trim().startsWith("127.");
+  const backendIsLocal =
+    p.backendURL.trim().toLowerCase().includes("localhost") ||
+    p.backendURL.trim().includes("127.");
+  const frontendIsLocal =
+    p.frontendURL.trim().toLowerCase().includes("localhost") ||
+    p.frontendURL.trim().includes("127.");
 
   const set = (k: keyof MikrotikParams) => (v: string) =>
     setP((prev) => ({ ...prev, [k]: v }));
@@ -586,16 +602,29 @@ function ScriptDialog({ nas, onClose }: { nas: NAS; onClose: () => void }) {
                 onChange={(e) => set("radiusSecret")(e.target.value)}
               />
             </SmallField>
-            <SmallField label="Host/URL Backend (walled garden)">
+            <SmallField label="URL Frontend / Storefront">
               <Input
-                value={p.feHost}
-                onChange={(e) => set("feHost")(e.target.value)}
-                placeholder="192.168.1.3:8082 / http://192.168.1.3:8082"
+                value={p.frontendURL}
+                onChange={(e) => set("frontendURL")(e.target.value)}
+                placeholder="https://wifi.example.com"
               />
-              {feHostIsLocal && (
+              {frontendIsLocal && (
                 <p className="text-xs text-destructive">
-                  Jangan pakai localhost untuk script router. Isi IP mini PC
-                  yang bisa dijangkau Mikrotik.
+                  Jangan pakai localhost untuk pelanggan hotspot. Isi domain
+                  atau IP frontend yang bisa dijangkau dari WiFi.
+                </p>
+              )}
+            </SmallField>
+            <SmallField label="URL Backend API (fetch login.html)">
+              <Input
+                value={p.backendURL}
+                onChange={(e) => set("backendURL")(e.target.value)}
+                placeholder="https://api.example.com"
+              />
+              {backendIsLocal && (
+                <p className="text-xs text-destructive">
+                  Jangan pakai localhost untuk router. Isi domain atau IP
+                  backend yang bisa dijangkau Mikrotik.
                 </p>
               )}
             </SmallField>

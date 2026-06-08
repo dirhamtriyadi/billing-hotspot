@@ -191,6 +191,8 @@ export interface NASHotspotConfig {
   radius_api_url: string;
   radius_api_key: string;
   radius_ip: string;
+  frontend_url: string;
+  backend_url: string;
   frontend_host: string;
   coa_port: string;
   wan_interface: string;

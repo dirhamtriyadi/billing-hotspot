@@ -16,6 +16,8 @@ type NASHotspotConfig struct {
 	RadiusAPIURL     string `gorm:"column:radius_api_url;size:255;not null;default:''" json:"radius_api_url"`
 	RadiusAPIKey     string `gorm:"column:radius_api_key;size:255;not null;default:''" json:"radius_api_key"`
 	RadiusIP         string `gorm:"column:radius_ip;size:128;not null;default:''" json:"radius_ip"`
+	FrontendURL      string `gorm:"column:frontend_url;size:255;not null;default:''" json:"frontend_url"`
+	BackendURL       string `gorm:"column:backend_url;size:255;not null;default:''" json:"backend_url"`
 	FrontendHost     string `gorm:"size:128;not null;default:''" json:"frontend_host"`
 	CoAPort          string `gorm:"column:coa_port;size:10;not null;default:'3799'" json:"coa_port"`
 	WANInterface     string `gorm:"column:wan_interface;size:60;not null;default:'ether1'" json:"wan_interface"`

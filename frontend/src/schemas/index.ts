@@ -66,6 +66,8 @@ const nasHotspotConfigSchema = z.object({
   radius_api_url: z.string().max(255, "Maksimal 255 karakter").optional(),
   radius_api_key: z.string().max(255, "Maksimal 255 karakter").optional(),
   radius_ip: z.string().max(128, "Maksimal 128 karakter").optional(),
+  frontend_url: z.string().max(255, "Maksimal 255 karakter").optional(),
+  backend_url: z.string().max(255, "Maksimal 255 karakter").optional(),
   frontend_host: z.string().max(128, "Maksimal 128 karakter").optional(),
   coa_port: z.string().max(10, "Maksimal 10 karakter").optional(),
   wan_interface: z.string().max(60, "Maksimal 60 karakter").optional(),
