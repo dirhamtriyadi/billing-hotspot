@@ -61,6 +61,7 @@ func (s *RadiusServerService) Update(ctx context.Context, id uint, in dto.Radius
 			"api_key":     row.APIKey,
 			"radius_ip":   row.RadiusIP,
 			"coa_port":    row.CoAPort,
+			"timeout":     row.Timeout,
 			"description": row.Description,
 			"is_default":  row.IsDefault,
 		}).Error
@@ -88,6 +89,7 @@ func radiusServerFromInput(in dto.RadiusServerInput) models.RadiusServer {
 		APIKey:      in.APIKey,
 		RadiusIP:    in.RadiusIP,
 		CoAPort:     defaultString(in.CoAPort, "3799"),
+		Timeout:     defaultString(in.Timeout, "10s"),
 		Description: in.Description,
 		IsDefault:   in.IsDefault,
 	}
@@ -101,6 +103,7 @@ func radiusServerOutput(row models.RadiusServer) dto.RadiusServerOutput {
 		APIKey:      row.APIKey,
 		RadiusIP:    row.RadiusIP,
 		CoAPort:     row.CoAPort,
+		Timeout:     row.Timeout,
 		Description: row.Description,
 		IsDefault:   row.IsDefault,
 	}

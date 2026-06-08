@@ -212,6 +212,7 @@ export interface RadiusServer {
   api_key: string;
   radius_ip: string;
   coa_port: string;
+  timeout: string;
   description: string;
   is_default: boolean;
 }

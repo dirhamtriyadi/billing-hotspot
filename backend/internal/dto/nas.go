@@ -19,6 +19,7 @@ type RadiusServerInput struct {
 	APIKey      string `json:"api_key" binding:"max=255"`
 	RadiusIP    string `json:"radius_ip" binding:"max=128"`
 	CoAPort     string `json:"coa_port" binding:"max=10"`
+	Timeout     string `json:"timeout" binding:"max=20"`
 	Description string `json:"description" binding:"max=200"`
 	IsDefault   bool   `json:"is_default"`
 }
@@ -30,6 +31,7 @@ type RadiusServerOutput struct {
 	APIKey      string `json:"api_key"`
 	RadiusIP    string `json:"radius_ip"`
 	CoAPort     string `json:"coa_port"`
+	Timeout     string `json:"timeout"`
 	Description string `json:"description"`
 	IsDefault   bool   `json:"is_default"`
 }

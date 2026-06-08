@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/dirhamt/billing-hotspot/backend/internal/apperror"
-	"github.com/dirhamt/billing-hotspot/backend/internal/config"
 )
 
 // Client talks to the radius-api over HTTP, authenticated with a shared API key.
@@ -21,11 +20,6 @@ type Client struct {
 	baseURL string
 	apiKey  string
 	http    *http.Client
-}
-
-// NewClient builds a radius-api client from configuration.
-func NewClient(cfg config.RadiusConfig) *Client {
-	return NewClientWith(cfg.BaseURL, cfg.APIKey, cfg.Timeout)
 }
 
 // NewClientWith builds a radius-api client from explicit endpoint values. It is

@@ -88,6 +88,7 @@ export const radiusServerSchema = z.object({
   api_key: z.string().max(255).optional(),
   radius_ip: z.string().max(128).optional(),
   coa_port: z.string().max(10).optional(),
+  timeout: z.string().max(20).optional(),
   description: z.string().max(200).optional(),
   is_default: z.boolean(),
 });

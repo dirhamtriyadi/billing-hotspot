@@ -9,6 +9,7 @@ type RadiusServer struct {
 	APIKey      string `gorm:"column:api_key;size:255;not null;default:''" json:"api_key"`
 	RadiusIP    string `gorm:"column:radius_ip;size:128;not null;default:''" json:"radius_ip"`
 	CoAPort     string `gorm:"column:coa_port;size:10;not null;default:'3799'" json:"coa_port"`
+	Timeout     string `gorm:"size:20;not null;default:'10s'" json:"timeout"`
 	Description string `gorm:"size:200;not null;default:''" json:"description"`
 	IsDefault   bool   `gorm:"column:is_default;not null;default:false" json:"is_default"`
 }

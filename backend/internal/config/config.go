@@ -18,7 +18,6 @@ type Config struct {
 	App     AppConfig
 	DB      DBConfig
 	JWT     JWTConfig
-	Radius  RadiusConfig
 	Payment PaymentConfig
 	CORS    CORSConfig
 }
@@ -59,13 +58,6 @@ type JWTConfig struct {
 	Secret    string
 	Issuer    string
 	AccessTTL time.Duration
-}
-
-// RadiusConfig points at the radius-api microservice.
-type RadiusConfig struct {
-	BaseURL string
-	APIKey  string
-	Timeout time.Duration
 }
 
 // PaymentConfig aggregates every supported payment provider's credentials.
@@ -130,11 +122,6 @@ func Load() *Config {
 			Secret:    getEnv("JWT_SECRET", "change-me-in-production-please-32chars"),
 			Issuer:    getEnv("JWT_ISSUER", "billing-hotspot"),
 			AccessTTL: getEnvDuration("JWT_ACCESS_TTL", 24*time.Hour),
-		},
-		Radius: RadiusConfig{
-			BaseURL: getEnv("RADIUS_API_URL", ""),
-			APIKey:  getEnv("RADIUS_API_KEY", ""),
-			Timeout: getEnvDuration("RADIUS_API_TIMEOUT", 10*time.Second),
 		},
 		Payment: PaymentConfig{
 			DefaultProvider: getEnv("PAYMENT_DEFAULT_PROVIDER", "midtrans"),

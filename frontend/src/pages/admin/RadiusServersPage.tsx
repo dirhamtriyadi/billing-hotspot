@@ -40,6 +40,7 @@ const defaults: RadiusServerValues = {
   api_key: "",
   radius_ip: "",
   coa_port: "3799",
+  timeout: "10s",
   description: "",
   is_default: false,
 };
@@ -73,6 +74,7 @@ export default function RadiusServersPage() {
       api_key: row.api_key,
       radius_ip: row.radius_ip,
       coa_port: row.coa_port || "3799",
+      timeout: row.timeout || "10s",
       description: row.description,
       is_default: row.is_default,
     });
@@ -140,6 +142,7 @@ export default function RadiusServersPage() {
                   <TableHead>Radius API URL</TableHead>
                   <TableHead>IP RADIUS</TableHead>
                   <TableHead>CoA</TableHead>
+                  <TableHead>Timeout</TableHead>
                   <TableHead>Default</TableHead>
                   <TableHead>Deskripsi</TableHead>
                   <TableHead className="text-right">Aksi</TableHead>
@@ -156,6 +159,7 @@ export default function RadiusServersPage() {
                       {row.radius_ip || "-"}
                     </TableCell>
                     <TableCell>{row.coa_port || "3799"}</TableCell>
+                    <TableCell>{row.timeout || "10s"}</TableCell>
                     <TableCell>
                       {row.is_default ? (
                         <Badge>Default</Badge>
@@ -192,7 +196,7 @@ export default function RadiusServersPage() {
                 {data?.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={7}
+                      colSpan={8}
                       className="py-8 text-center text-muted-foreground"
                     >
                       Belum ada radius server. Tambahkan endpoint radius-api
@@ -236,7 +240,7 @@ export default function RadiusServersPage() {
             >
               <Input {...form.register("api_key")} />
             </Field>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-3">
               <Field
                 label="IP Server RADIUS"
                 error={form.formState.errors.radius_ip?.message}
@@ -251,6 +255,12 @@ export default function RadiusServersPage() {
                 error={form.formState.errors.coa_port?.message}
               >
                 <Input placeholder="3799" {...form.register("coa_port")} />
+              </Field>
+              <Field
+                label="Timeout API"
+                error={form.formState.errors.timeout?.message}
+              >
+                <Input placeholder="10s" {...form.register("timeout")} />
               </Field>
             </div>
             <Field

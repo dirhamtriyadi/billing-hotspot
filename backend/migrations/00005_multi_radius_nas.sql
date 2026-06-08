@@ -1,8 +1,8 @@
 -- +goose Up
 -- Keep a local copy of NAS metadata and the branch-local radius-api endpoint so
 -- the billing backend can provision vouchers/profiles to multiple FreeRADIUS
--- servers. Existing rows keep using the environment RADIUS_API_URL/API_KEY when
--- these endpoint columns are empty.
+-- servers. Existing rows can leave these columns empty until a Radius Server
+-- is assigned from the admin UI.
 
 ALTER TABLE nas_hotspot_configs
     ADD COLUMN shortname      VARCHAR(32)  NOT NULL DEFAULT '',

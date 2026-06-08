@@ -35,7 +35,7 @@ func New(cfg *config.Config, db *gorm.DB) *gin.Engine {
 	)
 
 	// External clients and services.
-	radiusDirectory := services.NewRadiusDirectory(db, cfg.Radius)
+	radiusDirectory := services.NewRadiusDirectory(db)
 	paymentRegistry := payment.NewRegistry(cfg.Payment)
 
 	authSvc := services.NewAuthService(db, cfg.JWT)
@@ -45,7 +45,7 @@ func New(cfg *config.Config, db *gorm.DB) *gin.Engine {
 	dashSvc := services.NewDashboardService(db)
 	settingSvc := services.NewSettingService(db)
 	gatewaySvc := services.NewGatewayService(settingSvc, cfg.Payment, paymentRegistry)
-	nasSvc := services.NewNasService(db, cfg.App, cfg.Radius)
+	nasSvc := services.NewNasService(db, cfg.App)
 	radiusServerSvc := services.NewRadiusServerService(db)
 	reportSvc := services.NewReportService(db)
 

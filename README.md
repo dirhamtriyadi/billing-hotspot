@@ -268,6 +268,8 @@ di **Admin → Radius Server**:
   `https://radius-bandung.example.com`.
 - **Radius API Key**: API key `radius-api` cabang.
 - **IP Server RADIUS**: IP/host FreeRADIUS yang bisa dijangkau Mikrotik cabang.
+- **Timeout API**: timeout HTTP backend saat memanggil `radius-api`, default
+  `10s`.
 
 Lalu di **Admin → Router (NAS)** pilih **Radius Server** yang sesuai. Field
 Radius API URL/key/IP akan terisi dari master data itu dan masih bisa dioverride

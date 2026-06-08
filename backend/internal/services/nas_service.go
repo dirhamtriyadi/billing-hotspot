@@ -17,14 +17,13 @@ import (
 // hotspot deployment settings are stored in the billing database and merged into
 // the admin-facing response.
 type NasService struct {
-	db     *gorm.DB
-	app    config.AppConfig
-	radius config.RadiusConfig
+	db  *gorm.DB
+	app config.AppConfig
 }
 
 // NewNasService builds a NasService.
-func NewNasService(db *gorm.DB, appCfg config.AppConfig, radiusCfg config.RadiusConfig) *NasService {
-	return &NasService{db: db, app: appCfg, radius: radiusCfg}
+func NewNasService(db *gorm.DB, appCfg config.AppConfig) *NasService {
+	return &NasService{db: db, app: appCfg}
 }
 
 // List returns every registered NAS.
@@ -185,9 +184,14 @@ func outputFromConfig(cfg models.NASHotspotConfig) dto.NASOutput {
 }
 
 func (s *NasService) clientForConfig(cfg models.NASHotspotConfig) *radius.Client {
-	url := defaultString(cfg.RadiusAPIURL, s.radius.BaseURL)
-	key := defaultString(cfg.RadiusAPIKey, s.radius.APIKey)
-	return radius.NewClientWith(strings.TrimRight(url, "/"), key, s.radius.Timeout)
+	timeout := ""
+	if cfg.RadiusServerID != nil {
+		var srv models.RadiusServer
+		if err := s.db.Where("id = ?", *cfg.RadiusServerID).First(&srv).Error; err == nil {
+			timeout = srv.Timeout
+		}
+	}
+	return radius.NewClientWith(strings.TrimRight(cfg.RadiusAPIURL, "/"), cfg.RadiusAPIKey, parseRadiusTimeout(timeout))
 }
 
 func (s *NasService) deleteRemoteNAS(ctx context.Context, cfg models.NASHotspotConfig) error {
@@ -209,10 +213,10 @@ func (s *NasService) deleteRemoteNASBestEffort(ctx context.Context, cfg models.N
 }
 
 func (s *NasService) endpointChanged(a, b models.NASHotspotConfig) bool {
-	aURL := strings.TrimRight(defaultString(a.RadiusAPIURL, s.radius.BaseURL), "/")
-	bURL := strings.TrimRight(defaultString(b.RadiusAPIURL, s.radius.BaseURL), "/")
-	aKey := defaultString(a.RadiusAPIKey, s.radius.APIKey)
-	bKey := defaultString(b.RadiusAPIKey, s.radius.APIKey)
+	aURL := strings.TrimRight(a.RadiusAPIURL, "/")
+	bURL := strings.TrimRight(b.RadiusAPIURL, "/")
+	aKey := a.RadiusAPIKey
+	bKey := b.RadiusAPIKey
 	return aURL != bURL || aKey != bKey
 }
 
