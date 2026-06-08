@@ -18,8 +18,8 @@ type RadiusEndpoint struct {
 }
 
 // RadiusDirectory resolves all radius-api endpoints configured in Radius Server
-// master data and NAS records. Empty per-NAS values fall back to the legacy
-// single RADIUS_API_URL/API_KEY.
+// master data and NAS records. Legacy single-RADIUS env values are only used
+// as a compatibility fallback when no Radius Server/NAS endpoint exists.
 type RadiusDirectory struct {
 	db  *gorm.DB
 	cfg config.RadiusConfig

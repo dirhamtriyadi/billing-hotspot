@@ -409,26 +409,26 @@ export default function NasPage() {
                   </select>
                 </Field>
                 <Field
-                  label="Radius API URL Cabang"
+                  label="Radius API URL override"
                   error={
                     form.formState.errors.hotspot_config?.radius_api_url
                       ?.message
                   }
                 >
                   <Input
-                    placeholder="https://radius-bandung.example.com / kosong = env default"
+                    placeholder="opsional, kosong = ikut Radius Server terpilih"
                     {...form.register("hotspot_config.radius_api_url")}
                   />
                 </Field>
                 <Field
-                  label="Radius API Key Cabang"
+                  label="Radius API Key override"
                   error={
                     form.formState.errors.hotspot_config?.radius_api_key
                       ?.message
                   }
                 >
                   <Input
-                    placeholder="kosong = env RADIUS_API_KEY"
+                    placeholder="opsional, kosong = ikut Radius Server terpilih"
                     {...form.register("hotspot_config.radius_api_key")}
                   />
                 </Field>

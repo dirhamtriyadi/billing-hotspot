@@ -115,8 +115,9 @@ make down           # hentikan semua
 make radius-logs    # tail log per-stack
 ```
 
-> **Penting:** `RADIUS_API_KEY` di `backend/.env` harus **sama** dengan
-> `API_KEY` di `radius-api/.env` (default sudah cocok: `radius-shared-secret`).
+> **Penting:** `API_KEY` di `radius-api/.env` didaftarkan di menu
+> **Admin → Radius Server → Radius API Key**. Backend tidak lagi menyimpan
+> endpoint/key radius-api di `.env`.
 
 > Untuk start/stop satu service saja, cukup `cd <folder> && docker compose
 > up -d` / `docker compose down`. Database service ikut di stack-nya.
@@ -345,7 +346,7 @@ make radius-swagger
 
 ## 🔒 Catatan produksi
 
-- Ganti **semua** secret di `.env` (`JWT_SECRET`, `RADIUS_API_KEY`,
+- Ganti **semua** secret di `.env` (`JWT_SECRET`, `API_KEY` radius-api,
   `NAS_SHARED_SECRET`, password DB).
 - Ganti password admin default.
 - Set `APP_ENV=production`, `*_IS_PRODUCTION=true`, dan `APP_BASE_URL`/

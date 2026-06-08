@@ -132,8 +132,8 @@ func Load() *Config {
 			AccessTTL: getEnvDuration("JWT_ACCESS_TTL", 24*time.Hour),
 		},
 		Radius: RadiusConfig{
-			BaseURL: getEnv("RADIUS_API_URL", "http://localhost:8081"),
-			APIKey:  getEnv("RADIUS_API_KEY", "radius-shared-secret"),
+			BaseURL: getEnv("RADIUS_API_URL", ""),
+			APIKey:  getEnv("RADIUS_API_KEY", ""),
 			Timeout: getEnvDuration("RADIUS_API_TIMEOUT", 10*time.Second),
 		},
 		Payment: PaymentConfig{

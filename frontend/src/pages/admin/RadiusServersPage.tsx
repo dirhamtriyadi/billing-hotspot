@@ -195,8 +195,8 @@ export default function RadiusServersPage() {
                       colSpan={7}
                       className="py-8 text-center text-muted-foreground"
                     >
-                      Belum ada radius server. Jika kosong, sistem tetap memakai
-                      env backend RADIUS_API_URL/RADIUS_API_KEY.
+                      Belum ada radius server. Tambahkan endpoint radius-api
+                      cabang terlebih dahulu.
                     </TableCell>
                   </TableRow>
                 )}
