@@ -18,12 +18,13 @@ import (
 // the admin-facing response.
 type NasService struct {
 	db     *gorm.DB
+	app    config.AppConfig
 	radius config.RadiusConfig
 }
 
 // NewNasService builds a NasService.
-func NewNasService(db *gorm.DB, radiusCfg config.RadiusConfig) *NasService {
-	return &NasService{db: db, radius: radiusCfg}
+func NewNasService(db *gorm.DB, appCfg config.AppConfig, radiusCfg config.RadiusConfig) *NasService {
+	return &NasService{db: db, app: appCfg, radius: radiusCfg}
 }
 
 // List returns every registered NAS.
@@ -43,7 +44,7 @@ func (s *NasService) List(ctx context.Context) ([]dto.NASOutput, error) {
 
 // Upsert registers or updates a NAS keyed by nasname.
 func (s *NasService) Upsert(ctx context.Context, in dto.NASInput) (*dto.NASOutput, error) {
-	cfg := configFromInput(in.NASName, in)
+	cfg := s.configFromInput(in.NASName, in)
 	var previous models.NASHotspotConfig
 	hadPrevious := s.db.WithContext(ctx).Where("nasname = ?", in.NASName).First(&previous).Error == nil
 
@@ -113,7 +114,7 @@ func (s *NasService) Delete(ctx context.Context, id uint) error {
 	return nil
 }
 
-func configFromInput(nasname string, in dto.NASInput) models.NASHotspotConfig {
+func (s *NasService) configFromInput(nasname string, in dto.NASInput) models.NASHotspotConfig {
 	hotspot := in.HotspotConfig
 	return models.NASHotspotConfig{
 		NASName:          nasname,
@@ -125,8 +126,8 @@ func configFromInput(nasname string, in dto.NASInput) models.NASHotspotConfig {
 		RadiusAPIURL:     strings.TrimRight(hotspot.RadiusAPIURL, "/"),
 		RadiusAPIKey:     hotspot.RadiusAPIKey,
 		RadiusIP:         hotspot.RadiusIP,
-		FrontendURL:      strings.TrimRight(hotspot.FrontendURL, "/"),
-		BackendURL:       strings.TrimRight(hotspot.BackendURL, "/"),
+		FrontendURL:      strings.TrimRight(defaultString(hotspot.FrontendURL, s.app.FrontendURL), "/"),
+		BackendURL:       strings.TrimRight(defaultString(hotspot.BackendURL, s.app.BaseURL), "/"),
 		FrontendHost:     hotspot.FrontendHost,
 		CoAPort:          defaultString(hotspot.CoAPort, "3799"),
 		WANInterface:     defaultString(hotspot.WANInterface, "ether1"),

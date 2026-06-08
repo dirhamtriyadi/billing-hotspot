@@ -45,7 +45,7 @@ func New(cfg *config.Config, db *gorm.DB) *gin.Engine {
 	dashSvc := services.NewDashboardService(db)
 	settingSvc := services.NewSettingService(db)
 	gatewaySvc := services.NewGatewayService(settingSvc, cfg.Payment, paymentRegistry)
-	nasSvc := services.NewNasService(db, cfg.Radius)
+	nasSvc := services.NewNasService(db, cfg.App, cfg.Radius)
 	reportSvc := services.NewReportService(db)
 
 	// Apply any DB-stored gateway credentials on top of the env defaults so the

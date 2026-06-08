@@ -384,7 +384,7 @@ export default function NasPage() {
                   }
                 >
                   <Input
-                    placeholder="https://wifi.example.com / kosong = URL frontend saat ini"
+                    placeholder="https://wifi.example.com / kosong = env FRONTEND_URL backend"
                     {...form.register("hotspot_config.frontend_url")}
                   />
                 </Field>
@@ -395,7 +395,7 @@ export default function NasPage() {
                   }
                 >
                   <Input
-                    placeholder="https://api.example.com / kosong = VITE_API_BASE_URL"
+                    placeholder="https://api.example.com / kosong = env APP_BASE_URL backend"
                     {...form.register("hotspot_config.backend_url")}
                   />
                 </Field>

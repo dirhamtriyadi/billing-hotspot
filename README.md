@@ -224,8 +224,10 @@ NAS secara eksplisit:
 - **URL Backend API**: URL backend yang bisa dijangkau Mikrotik untuk mengambil
   `login.html`, mis. `https://api.example.com`.
 
-Generator script akan memasukkan keduanya ke walled garden sebelum login. Untuk
-redirect setelah pembayaran dan webhook gateway, tetap atur env backend:
+Jika dikosongkan saat menyimpan NAS, backend mengisinya dari env:
+`FRONTEND_URL` untuk storefront dan `APP_BASE_URL` untuk API. Generator script
+akan memasukkan keduanya ke walled garden sebelum login. Untuk redirect setelah
+pembayaran dan webhook gateway, env yang sama tetap dipakai:
 `FRONTEND_URL=https://wifi.example.com` dan
 `APP_BASE_URL=https://api.example.com`.
 
