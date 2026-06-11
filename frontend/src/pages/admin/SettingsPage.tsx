@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { errorMessage, applyApiErrors } from "@/lib/form";
+import { normalizeWaNumber, isValidWaNumber } from "@/lib/phone";
 import { changePasswordSchema, type ChangePasswordValues } from "@/schemas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,7 @@ const FIELDS: { key: string; label: string; type?: "textarea" }[] = [
 export default function SettingsPage() {
   const qc = useQueryClient();
   const [values, setValues] = useState<Record<string, string>>({});
+  const [waError, setWaError] = useState("");
 
   const { data, isLoading } = useQuery({
     queryKey: ["settings"],
@@ -36,7 +38,8 @@ export default function SettingsPage() {
   }, [data]);
 
   const save = useMutation({
-    mutationFn: () => api.settings.update(values),
+    mutationFn: (payload: Record<string, string>) =>
+      api.settings.update(payload),
     onSuccess: () => {
       toast.success("Pengaturan disimpan");
       qc.invalidateQueries({ queryKey: ["settings"] });
@@ -44,6 +47,24 @@ export default function SettingsPage() {
     },
     onError: (e) => toast.error(errorMessage(e)),
   });
+
+  // Validate + normalise the WhatsApp number at save time so a malformed value
+  // never reaches the DB. Empty is allowed (button just won't show downstream).
+  const handleSave = () => {
+    const wa = (values.contact_whatsapp ?? "").trim();
+    if (wa && !isValidWaNumber(wa)) {
+      setWaError(
+        "Nomor WhatsApp tidak valid. Contoh: 081313102678 atau 6281313102678.",
+      );
+      toast.error("Nomor WhatsApp tidak valid");
+      return;
+    }
+    setWaError("");
+    const payload = { ...values };
+    if (wa) payload.contact_whatsapp = normalizeWaNumber(wa); // standardise → 62…
+    setValues(payload);
+    save.mutate(payload);
+  };
 
   const pwForm = useForm<ChangePasswordValues>({
     resolver: zodResolver(changePasswordSchema),
@@ -93,6 +114,30 @@ export default function SettingsPage() {
                           setValues((v) => ({ ...v, [f.key]: e.target.value }))
                         }
                       />
+                    ) : f.key === "contact_whatsapp" ? (
+                      <>
+                        <Input
+                          value={values[f.key] ?? ""}
+                          placeholder="081313102678 / 6281313102678"
+                          onChange={(e) => {
+                            setWaError("");
+                            setValues((v) => ({
+                              ...v,
+                              [f.key]: e.target.value,
+                            }));
+                          }}
+                          onBlur={(e) => {
+                            // Rapikan ke standar 62… begitu admin pindah fokus,
+                            // jadi yang tampil = yang akan disimpan.
+                            const n = normalizeWaNumber(e.target.value);
+                            if (n)
+                              setValues((v) => ({ ...v, [f.key]: n }));
+                          }}
+                        />
+                        {waError && (
+                          <p className="text-sm text-destructive">{waError}</p>
+                        )}
+                      </>
                     ) : (
                       <Input
                         value={values[f.key] ?? ""}
@@ -103,10 +148,7 @@ export default function SettingsPage() {
                     )}
                   </div>
                 ))}
-                <Button
-                  onClick={() => save.mutate()}
-                  disabled={save.isPending}
-                >
+                <Button onClick={handleSave} disabled={save.isPending}>
                   {save.isPending && (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   )}

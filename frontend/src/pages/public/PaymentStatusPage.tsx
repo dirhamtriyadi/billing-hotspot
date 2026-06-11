@@ -15,6 +15,7 @@ import {
 import { api } from "@/lib/api";
 import { formatIDR } from "@/lib/format";
 import { hotspotGateway } from "@/lib/hotspot";
+import { normalizeWaNumber } from "@/lib/phone";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { Order } from "@/types";
@@ -180,26 +181,14 @@ export default function PaymentStatusPage() {
 }
 
 /**
- * Normalise an Indonesian phone number to wa.me international form (62…), so the
- * owner's saved number works whether stored as 0…, 62…, +62…, or with spaces.
- * Returns "" when there is no usable number.
- */
-function waNumber(raw?: string): string {
-  const digits = (raw || "").replace(/\D/g, "");
-  if (!digits) return "";
-  if (digits.startsWith("0")) return "62" + digits.slice(1);
-  if (digits.startsWith("62")) return digits;
-  if (digits.startsWith("8")) return "62" + digits; // missing country code
-  return digits;
-}
-
-/**
  * Build the WhatsApp click-to-chat link the cash customer taps to confirm their
  * order with the owner. The prefilled message carries all the order details the
  * owner needs to verify and confirm payment. Returns null if no number is set.
+ * The number is already standardised at input (admin Settings), but we normalise
+ * again defensively in case of older/legacy values.
  */
 function waLink(rawNumber: string | undefined, order: Order): string | null {
-  const number = waNumber(rawNumber);
+  const number = normalizeWaNumber(rawNumber);
   if (!number) return null;
   const lines = [
     "Halo Admin, saya mau konfirmasi pembelian paket WiFi (bayar tunai):",
