@@ -8,6 +8,7 @@ import {
   Copy,
   Loader2,
   LogIn,
+  MessageCircle,
   Wifi,
   XCircle,
 } from "lucide-react";
@@ -16,6 +17,7 @@ import { formatIDR } from "@/lib/format";
 import { hotspotGateway } from "@/lib/hotspot";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import type { Order } from "@/types";
 
 export default function PaymentStatusPage() {
   const { orderNumber } = useParams<{ orderNumber: string }>();
@@ -26,6 +28,13 @@ export default function PaymentStatusPage() {
     enabled: !!orderNumber,
     refetchInterval: (query) =>
       query.state.data?.status === "pending" ? 5000 : false,
+  });
+
+  // Storefront settings carry the owner's WhatsApp number (contact_whatsapp),
+  // used to let a cash customer confirm their order when no operator is around.
+  const { data: settings } = useQuery({
+    queryKey: ["public-settings"],
+    queryFn: api.public.settings,
   });
 
   const copy = (text: string) => {
@@ -100,8 +109,9 @@ export default function PaymentStatusPage() {
               </h1>
               {order.payment_method === "cash" ? (
                 <p className="mt-2 text-muted-foreground">
-                  Tunjukkan nomor pesanan berikut ke operator untuk membayar
-                  tunai. Voucher akan aktif setelah dikonfirmasi.
+                  Tunjukkan nomor pesanan ke operator untuk membayar tunai.
+                  Voucher aktif setelah dikonfirmasi. Tidak ada operator di
+                  tempat? Konfirmasi lewat WhatsApp di bawah.
                 </p>
               ) : (
                 <p className="mt-2 text-muted-foreground">
@@ -118,6 +128,24 @@ export default function PaymentStatusPage() {
                   {order.order_number}
                 </p>
               </div>
+
+              {order.payment_method === "cash" &&
+                waLink(settings?.contact_whatsapp, order) && (
+                  <Button
+                    className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700"
+                    size="lg"
+                    asChild
+                  >
+                    <a
+                      href={waLink(settings?.contact_whatsapp, order)!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <MessageCircle className="h-5 w-5" />
+                      Konfirmasi via WhatsApp
+                    </a>
+                  </Button>
+                )}
 
               {order.payment_url && (
                 <Button className="w-full" size="lg" asChild>
@@ -149,6 +177,42 @@ export default function PaymentStatusPage() {
       </Card>
     </div>
   );
+}
+
+/**
+ * Normalise an Indonesian phone number to wa.me international form (62…), so the
+ * owner's saved number works whether stored as 0…, 62…, +62…, or with spaces.
+ * Returns "" when there is no usable number.
+ */
+function waNumber(raw?: string): string {
+  const digits = (raw || "").replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("0")) return "62" + digits.slice(1);
+  if (digits.startsWith("62")) return digits;
+  if (digits.startsWith("8")) return "62" + digits; // missing country code
+  return digits;
+}
+
+/**
+ * Build the WhatsApp click-to-chat link the cash customer taps to confirm their
+ * order with the owner. The prefilled message carries all the order details the
+ * owner needs to verify and confirm payment. Returns null if no number is set.
+ */
+function waLink(rawNumber: string | undefined, order: Order): string | null {
+  const number = waNumber(rawNumber);
+  if (!number) return null;
+  const lines = [
+    "Halo Admin, saya mau konfirmasi pembelian paket WiFi (bayar tunai):",
+    "",
+    `No. Pesanan: ${order.order_number}`,
+    `Paket: ${order.package?.name ?? "-"}`,
+    `Total: ${formatIDR(order.amount)}`,
+    `Nama: ${order.customer_name || "-"}`,
+    `No. HP: ${order.customer_phone || "-"}`,
+    "",
+    "Mohon dikonfirmasi agar voucher saya aktif. Terima kasih.",
+  ];
+  return `https://wa.me/${number}?text=${encodeURIComponent(lines.join("\n"))}`;
 }
 
 /**
