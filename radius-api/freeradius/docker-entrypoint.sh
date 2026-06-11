@@ -45,6 +45,14 @@ if [ ! -e "${RADDB}/mods-enabled/sql" ]; then
   echo "[entrypoint] enabled sql module"
 fi
 
+# NOTE on Simultaneous-Use: the "1 voucher = 1 concurrent device" limit is
+# enforced at the MIKROTIK layer (hotspot user profile shared-users=1, set by
+# the generated .rsc), which is reliable and independent of accounting state.
+# We deliberately do NOT enable FreeRADIUS's session{sql} simul counter here:
+# without a working checkrad it can lock a customer out on a stale (un-stopped)
+# radacct session — a real support/revenue risk — for no proven gain over the
+# Mikrotik-side limit.
+
 # 5) Start FreeRADIUS in the foreground (-f), logging to stdout. Enable debug
 #    output (-x) only when RADIUS_DEBUG=yes.
 DEBUG_FLAG=""

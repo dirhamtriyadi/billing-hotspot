@@ -428,6 +428,22 @@ ${bridgeBlock}# --- RADIUS -----------------------------------------------------
       profile=hsprof-billing disabled=no
 }
 
+# --- Pengamanan: anti share-voucher & anti-tethering -------------------------
+:put "  Pengamanan voucher (shared-users, MAC cookie, anti-tethering)..."
+# (a) 1 voucher = 1 sesi aktif (shared-users=1) + ikat sesi ke device pertama
+#     lewat MAC cookie. Mencegah kode dipakai bersamaan di banyak HP.
+/ip hotspot user profile set [find name="default"] shared-users=1 add-mac-cookie=yes
+# (b) Anti-tethering (heuristik TTL): trafik device yg di-tether sudah lewat 1
+#     hop di HP sehingga TTL turun 1 (Android/iOS/Linux 64->63, Windows 128->127).
+#     Drop TTL itu. CATATAN: tidak 100% (bisa diakali normalisasi TTL) & bisa
+#     false-positive di topologi tertentu — hapus rule billing-antitether bila
+#     mengganggu: /ip firewall mangle remove [find where comment="billing-antitether"]
+/ip firewall mangle
+:if ([:len [find where comment="billing-antitether"]] = 0) do={
+  add chain=prerouting in-interface=$hsInterface ttl=equal:63 action=drop comment="billing-antitether"
+  add chain=prerouting in-interface=$hsInterface ttl=equal:127 action=drop comment="billing-antitether"
+}
+
 # --- Walled Garden (akses sebelum login) -------------------------------------
 :put "[${s(7)}] Walled garden (storefront + Midtrans)..."
 # Bersihkan rule lama (kalau script dijalankan ulang) supaya tidak menumpuk.
@@ -501,6 +517,8 @@ export function generateMikrotikTeardown(): string {
 /ip address remove [find where comment="hotspot-gw"]
 /ip pool remove [find where name="hs-pool"]
 /ip firewall nat remove [find where comment="billing-nat"]
+/ip firewall mangle remove [find where comment="billing-antitether"]
+:do { /ip hotspot user profile set [find name="default"] add-mac-cookie=no } on-error={}
 /radius remove [find where comment="billing-hotspot"]
 /radius incoming set accept=no
 # Lepas port dari bridge-hotspot lalu hapus bridge-nya (abaikan bila tak ada).
